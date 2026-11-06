@@ -1,139 +1,131 @@
-# Honkai: Star Rail Warp Simulator
+# 星穹铁道跃迁模拟器（点名版） — 崩坏：星穹铁道风格的抽卡模拟 + 自建名单点名工具
 
-![License](https://badgen.net/github/license/Mantan21/HSR-Warp-Simulator?icon:github) ![Repo Size](https://img.shields.io/github/repo-size/Mantan21/HSR-Warp-Simulator?color=fa0) [![CodeFactor](https://www.codefactor.io/repository/github/mantan21/hsr-warp-simulator/badge)](https://www.codefactor.io/repository/github/mantan21/hsr-warp-simulator) ![Status](https://badgen.net/github/checks/Mantan21/HSR-Warp-Simulator) ![Code Standard](https://badgen.net/badge/code%20style/standard/f2a) [![Trakteer](https://badgen.net/badge/Trakteer/Mantan21/BE1E2D)](https://trakteer.id/mantan21)
+界面全中文、完全离线可用的跃迁模拟器。在还原游戏抽卡演出与保底机制的基础上，新增「名单点名」玩法：导入或自建一份名单（同学、同事、抽奖名单皆可），用跃迁演出随机点人。
 
-This project is similar to the [Genshin Impact Wish Simulator](https://github.com/Mantan21/Genshin-Impact-Wish-Simulator), I use the same algorithm and most of the code here I copy from there.
+- 完整复刻游戏跃迁演出：列车入场、逐张揭示、五星专属动画
+- 名单点名：自建名单 / 导入 TXT，勾选启用后在点名卡池抽取，可为每人设星级与头像
+- 完全离线：不联网、不收集任何个人信息，名单与记录只存在你自己的设备上
+- 三平台：Windows 安装版 / 便携版 / 安卓版
 
-## Screenshots
+> 本项目为开源项目 [HSR Warp Simulator](https://github.com/Mantan21/HSR-Warp-Simulator)（MIT）的中文修改版。游戏素材与名称版权归 miHoYo / HoYoverse 所有，本项目不用于任何商业用途。
 
-#### Main Banner
+## 截图
 
-![Main Banner](static/meta-picture.jpg)
+| 主跃迁页 | 点名卡池 |
+|---|---|
+| ![主跃迁页](screenshots/cn-main.jpg) | ![点名卡池](screenshots/cn-rollcall.jpg) |
 
-![Light Cone Banner](screenshots/light-cone.jpg)
+| 名单编辑器 |  |
+|---|---|
+| ![名单编辑器](screenshots/cn-editor.jpg) |  |
 
-#### Inventory
+上游英文界面预览（缩小展示）：
 
-![Bank Data](screenshots/bank-data.jpg)
+| 卡池详情 | 切换卡池 |
+|---|---|
+| <img src="screenshots/light-cone.jpg" width="360" alt="Light Cone Banner"> | <img src="screenshots/switch-banner.jpg" width="360" alt="Switch Banner"> |
 
-#### Inventory
+| 搜集（库存） | 商店 |
+|---|---|
+| <img src="screenshots/bank-data.jpg" width="360" alt="Bank Data"> | <img src="screenshots/shop.jpg" width="360" alt="Shop"> |
 
-![Phonograph](screenshots/phonograph.jpg)
+## 功能特性
 
-#### Switch banner
+**跃迁模拟**
 
-![Switch Banner](screenshots/switch-banner.jpg)
+1. 全部卡池类型：新手、常驻、角色活动、光锥活动
+2. 与游戏接近的保底机制（详见下方概率表）
+3. 每个卡池独立的跃迁详情与历史记录
+4. 同类型卡池共享保底，跨版本连续抽卡不清空进度
+5. 抽卡里程碑奖励，可在商店兑换星轨专票
+6. 结果可截图保存为图片，或生成分享链接
 
-#### Shop
+**名单点名（本版新增）**
 
-![Shop](screenshots/shop.jpg)
+7. 自建名单或导入 TXT（一人一行，行尾加空格和 3/4/5 可指定星级；支持 UTF-8 与 GBK 编码）
+8. 多名单管理：新建、重命名、删除、勾选启用，多名单可合并成一个池抽取
+9. 名单编辑器：设星级、设头像图标、多选批量操作（批量删除 / 设星级 / 设图标）
+10. 点名规则公平：十连内同一个人不会重复被点，星级只作展示、不影响概率
+11. 名单与图标只存本机（localStorage 与 IndexedDB），不上传任何地方
 
-> For more preview, please visit the live version at [https://hsr.wishsimulator.app](https://hsr.wishsimulator.app)
+**其他**
 
----
+12. 界面全中文，含关于页与更新日志页
+13. 数据全部保存在本地存储，清除/重置由你手动操作
+14. 安卓版横屏全屏运行，截图与备份直存系统下载目录
 
-## Features
+## 保底与概率
 
-1. All banner types available ( Starter, Regular, Character and Light Cone Event )
-2. Pity System almost like the real game.
-3. **Warp Details** for each banner.
-4. **Shop** section, Serving Gacha Currencies, Top Up function and More,
-5. **Bank Data** to show all items ( Characters and Light Cones ) that obtained from gacha or purchasement
-6. Different banner type has different **Gacha History**
-7. **Phonograph** to select and play musics.
-8. Gacha Milestone Bonus, exchangable to Star Rail Pass at the Shop section.
-9. Shared Pity to the same banner type, User can continuously gacha on different patch without resetting pity.
-10. Pity Counter, User can track their current information of their pity
-11. Site Localization, So I hope this Wish Sim can reach more people even they aren't english speaker.
-12. Mobile Friendly, responsive layout both landscape and portrait orientation.
-13. Screenshot and download wish result as image localy.
-14. Link generator if user want to share their gacha result through internet.
-15. All data will be saved to LocalStorage and indexedDB.
+概率算法沿用上游实现：`baseRate + ((CurrentPity - HardPity) * additionalRate)`，其中 `additionalRate = (100% - baseRate) / (HardPity 到 MaxPity 的差值)`。实现见 [probabilities.js](src/lib/helpers/gacha/probabilities.js)。
 
-## Pity System
+1. 角色活动 / 常驻跃迁的五星概率：基础 `0.6%`，第 74 抽开始递增，第 90 抽必出；限定五星在第 180 抽保底
 
-I don't know how HoyoVerse's algorithm is, so I tried to create mine as realistic as possible with the following points based on in-game wish details.
-
-> In order to get the same experience with the game when doing gacha, I tried to use the following formula for determining the gacha rates according to the current pity
->
-> `baseRate + ((CurrentPity - HardPity) * additionalRate)`
->
-> To get the number of `additionalRate`, I calculated `100% - baseRate` and divide it by the difference between `HardPity` to `MaxPity`.
-> [Check here](https://github.com/Mantan21/HSR-Warp-Simulator/blob/master/src/lib/helpers/gacha/probabilities.js#L1-L15) to see how I implemented it as code
-
-Based on the formula above, it can be concluded that the probability table is as follows:
-
-1. Probability for 4★ item on Character Event Warp
-   - 4★ item guaranteed at `10` roll and promoted 4★ item guaranteed at `20` roll.
-   - Base rate to get 4★ item is `5.1%`, guaranteed to get 4★ item at pity `10`
-
-   | **Pity** |  1   |  2   |  3   |  4   |  5   |  6   |  7   |  8   |   9    | ≥10  |
-   | -------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :----: | :--: |
-   | **Rate** | 5.1% | 5.1% | 5.1% | 5.1% | 5.1% | 5.1% | 5.1% | 5.1% | 52.55% | 100% |
-
-2. Probability for 4★ item on Light Cone Event Warp
-   - 4★ item guaranteed at `10` roll and promoted 4★ item guaranteed at `20` roll.
-   - Base rate to get 4★ item is `6.6%`, guaranteed to get 4★ item at pity `10`
-
-   | **Pity** |  1   |  2   |  3   |  4   |  5   |  6   |  7   |  8   |   9    | ≥10  |
-   | -------: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :--: | :----: | :--: |
-   | **Rate** | 6.6% | 6.6% | 6.6% | 6.6% | 6.6% | 6.6% | 6.6% | 6.6% | 53.30% | 100% |
-
-3. Light Cone Warp Probability
-   - 5★ Item guaranteed at `80` roll and promoted 5★ item guaranteed at `160` roll.
-   - Probability to get 5★ item is `0.8%`, the rate starts to increase at pity 63 and then guaranteed at pity `80`.
-
-   | **Pity** | ≤62  |  63   |   64   |   65   |   66   |   67   |   68   |   69   |   70   |   71   |   72   |   73   |   74   |   75   |   76   |   77   |   78   |   79   | ≥80  |
-   | -------: | :--: | :---: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :--: |
-   | **Rate** | 0.8% | 6.31% | 11.82% | 17.33% | 22.84% | 28.35% | 33.86% | 39.38% | 44.88% | 50.40% | 55.91% | 61.42% | 66.93% | 72.44% | 77.95% | 83.47% | 88.98% | 94.49% | 100% |
-
-4. Character Event and Regular Warp Probability
-   - 5★ Item guaranteed at `90` roll and promoted 5★ item guaranteed at `180` roll.
-   - Probability to get 5★ item is `0.6%`, the rate starts to increase at pity 74 and then guaranteed at pity `90`.
-
-   | **Pity** | ≤73  |  74   |  75   |   76   |   77   |   78   |   79   |   80   |   81   |   82   |   83   |   84   |   85   |   86   |   87   |   88   |   89   | ≥90  |
+   | **保底** | ≤73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 | 82 | 83 | 84 | 85 | 86 | 87 | 88 | 89 | ≥90 |
    | -------: | :--: | :---: | :---: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :--: |
-   | **Rate** | 0.6% | 6.45% | 12.3% | 18.14% | 23.99% | 29.83% | 35.68% | 41.53% | 47.38% | 53.22% | 59.07% | 64.92% | 70.76% | 76.61% | 82.46% | 88.30% | 94.15% | 100% |
+   | **概率** | 0.6% | 6.45% | 12.3% | 18.14% | 23.99% | 29.83% | 35.68% | 41.53% | 47.38% | 53.22% | 59.07% | 64.92% | 70.76% | 76.61% | 82.46% | 88.30% | 94.15% | 100% |
 
-5. When you guaranteed for 5★ and 4★ item at the same time, your next pull priority is 5★ item and 4★ item will appear next at pity 11. For example: On Character Event Banner, you doesn't get 5★ item until pity 89 and your 4★ pity is 9, So your next pull will looks like screenshot below.
+2. 光锥活动跃迁的五星概率：基础 `0.8%`，第 63 抽开始递增，第 80 抽必出；限定光锥在第 160 抽保底
+
+   | **保底** | ≤62 | 63 | 64 | 65 | 66 | 67 | 68 | 69 | 70 | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | ≥80 |
+   | -------: | :--: | :---: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :--: |
+   | **概率** | 0.8% | 6.31% | 11.82% | 17.33% | 22.84% | 28.35% | 33.86% | 39.38% | 44.88% | 50.40% | 55.91% | 61.42% | 66.93% | 72.44% | 77.95% | 83.47% | 88.98% | 94.49% | 100% |
+
+3. 四星概率：角色活动 `5.1%`、光锥活动 `6.6%`，均为第 10 抽必出四星、第 20 抽必出提升对象
+4. 五星与四星同时触发保底时，下一次优先出五星，四星保底顺延到第 11 抽：
 
    ![double guaranteed](screenshots/double-guaranteed.jpg)
 
-## Development
+## 下载与安装
 
-This app build with [Svelte-Kit](https://kit.svelte.dev/) based on Javascript programming language.
+| 平台 | 文件 | 安装方式 |
+|---|---|---|
+| Windows 10/11 64 位 | `hsr-warp-roll-richkobe-<版本>-windows-x64-setup.exe` | 双击安装；未做代码签名，系统拦截时点「更多信息 → 仍要运行」 |
+| Windows 10/11 64 位 | `hsr-warp-roll-richkobe-<版本>-windows-x64-portable.zip` | 解压后双击 exe 即用，免安装 |
+| Android 7.0+ | `hsr-warp-roll-richkobe-<版本>-android-arm64.apk` | 允许「安装未知来源应用」后安装；包名 `com.richkobe.hsrwarproll` |
 
-> NodeJS 18.x is required!
+下载地址见 [Release 页](https://github.com/yibanm/HSR-Warp-Simulator-richkobe/releases)。Windows 需系统自带的 WebView2 运行时（Windows 11 与较新的 Windows 10 已内置）。覆盖安装不会清除已有的名单与抽卡记录；安卓版与电脑端数据互不相通。
 
-Once you've cloned this project, install all dependencies with `npm install` (or `pnpm install` or `yarn`). Once all dependencies already installed, then you can start a development server or build for production:
+## 使用说明
+
+1. 首次打开会显示版本公告，点「加载模拟器」进入
+2. 抽卡：主界面右下角「跃迁1次 / 跃迁10次」；左上角时钟图标可看往期卡池
+3. 点名：顶部菜单第二个图标进入「名单点名」，勾选要用的名单后在点名卡池抽取
+4. 建名单：名单管理页「新建名单」逐条添加，或「导入 TXT」一次导入（一人一行）
+5. 设图标：名单编辑器里点条目左侧头像换图；多选后可批量设图标 / 星级 / 删除
+6. 保存截图：结果页下方保存按钮会弹出系统保存框，由你选择保存位置
+
+## 从源码构建
+
+需要 Node 22+（Capacitor CLI 要求）与 pnpm 9（`packageManager` 已钉版）。
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm dev          # 开发服务器
+pnpm build        # 静态站点产物到 build/
+npx tauri build   # Windows 桌面壳（需 Rust 工具链）
 ```
 
-<!-- ### How to Update new banner
+安卓版：`npx cap sync android` 后在 `android/` 下 `./gradlew assembleRelease`；release 签名配置见 `android/key.properties`（本地文件，不入库）。
 
-- The guide to Add New Banner are moved to Wiki, [Read Here](https://github.com/Mantan21/HSR-Warp-Simulator/wiki/How-to-Add-more-Banner) -->
+## 项目结构
 
-## Building
-
-Before creating a production version of your app, install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment, then run the command below. As default, this project use [Static Adapter](https://github.com/sveltejs/kit/tree/master/packages/adapter-static)
-
-```bash
-npm run build
+```
+src/
+  routes/          页面：跃迁(_warp)、菜单(_menu)、点名(Rollcall/编辑器)
+  lib/helpers/     抽卡概率、名单抽取(rollcall/)、音效、IndexedDB 封装
+  lib/data/        角色/光锥/卡池数据与中文语言包
+android/           Capacitor 安卓壳（含直存 Download 的自研插件）
+src-tauri/         Tauri Windows 壳与 NSIS 安装器配置
 ```
 
-## Contributing
+## 常见问题
 
-I'm welcome to all contributors! Feel free to [Open New Issue](https://github.com/Mantan21/HSR-Warp-Simulator/issues/new) if you find any problem or just want to give any suggestions.
+**完全没有声音？** 先检查 Windows 音量合成器：WebView2 是独立音频会话，可能被单独静音（右键喇叭 → 打开音量合成器 → 找到 WebView2 取消静音）。应用内音量滑块在菜单设置里。
 
-<!-- ### Thank You to all Contributors
+**名单导入后是乱码？** TXT 支持 UTF-8 与 GBK 两种编码，仍乱码请转成 UTF-8 再导入。
 
-[![Contributor](https://contrib.rocks/image?repo=Mantan21/HSR-Warp-Simulator)](https://github.com/Mantan21/HSR-Warp-Simulator/graphs/contributors) -->
+**数据存在哪里？** 全部在本机：抽卡记录与名单在浏览器本地存储（IndexedDB / localStorage），不联网上传。
 
-> **Notes :**
->
-> The data and assets used for this Project are taken from [Hoyo Wiki](https://wiki.hoyolab.com), [HSR Fandom Wiki](https://honkai-star-rail.fandom.com/wiki/Honkai:_Star_Rail_Wiki), [Honey Impact](https://hsr.honeyhunterworld.com/), [Project Yatta](https://hsr.yatta.top/), [Hakush](https://hsr.hakush.in/) and recorded from the game itself with several modification. <br/> **Important thing**: This App is not affiliated with Hoyoverse, all assets used for this application belongs to [HoYoVerse](http://hoyoverse.com/), so if you want to use assets from this repository, please keep in mind to credit them too.
+## 许可证
+
+源码遵循 MIT 协议（继承上游）。游戏素材与名称版权归 miHoYo / HoYoverse 所有，本项目不用于任何商业用途；复用本仓库素材时请一并注明素材来源。
