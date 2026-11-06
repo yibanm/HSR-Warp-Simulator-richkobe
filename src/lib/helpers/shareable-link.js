@@ -1,5 +1,13 @@
+// 原实现直接用 btoa/atob，只能处理 Latin1 字符。
+// 点名结果的 name 是中文，btoa 会抛 InvalidCharacterError 并中断结果页整次重渲染，
+// 表现为「状态已清但 DOM 留在屏幕上、点 X 关不掉」（2026-11-06 壳内 CDP 实测定位）。
+// 改为 UTF-8 安全编码：先 encodeURIComponent 再 btoa（与 26.GenshinWishRoll 同一方案）。
+// 旧链接内容是纯 ASCII，encodeURIComponent 对其无影响，因此向后兼容。
+const utf8ToBase64 = (str) => window.btoa(encodeURIComponent(str));
+const base64ToUtf8 = (encoded) => decodeURIComponent(window.atob(encoded));
+
 const encodeAndMakeLink = (string, path = 'item') => {
-	const encoded = window.btoa(string);
+	const encoded = utf8ToBase64(string);
 	const link = `${window.location.origin}/screen/${path}?a=${encoded}`;
 	return link;
 };
@@ -14,15 +22,12 @@ export const decodeAndReadData = {
 	},
 
 	single(encoded) {
-		const decoded = window.atob(encoded);
-		return this._read(decoded);
+		return this._read(base64ToUtf8(encoded));
 	},
 
 	multi(encoded) {
-		const decoded = window.atob(encoded);
-		const arrData = decoded.split('|');
-		const readData = arrData.map(this._read);
-		return readData;
+		const arrData = base64ToUtf8(encoded).split('|');
+		return arrData.map(this._read);
 	}
 };
 

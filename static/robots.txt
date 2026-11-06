@@ -1,6 +1,5 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Allow: /install
 Allow: /privacy-policy
 Allow: /$
 Disallow: /

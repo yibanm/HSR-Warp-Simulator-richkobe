@@ -1,48 +1,28 @@
 <script>
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import { t } from 'svelte-i18n';
 	import { fade, fly } from 'svelte/transition';
 
-	import { logs } from '$lib/data/logs.json';
-	import { isPWA, proUser } from '$lib/stores/app-store';
-	import accessKey from '$lib/helpers/access-key';
-	import { initTrack } from '$lib/helpers/sounds/phonograph';
+	// 开屏公告改渲染本仓库中文 updates.json（上游英文 logs.json 不再上屏）
+	import { brief } from '$lib/data/updates.json';
+	import { isPWA } from '$lib/stores/app-store';
 	import { browserDetect } from '$lib/helpers/mobile-detect';
 	import { playSfx } from '$lib/helpers/sounds/audiofx';
 
-	let savedKey = '';
-	let dateExpired = '';
-
-	const retry = () => {
-		console.log('reconecting...');
-		const timer = setTimeout(() => {
-			clearTimeout(timer);
-			verifyKey();
-		}, 10000);
-	};
-
-	const verifyKey = async () => {
-		const { validity, status } = await accessKey.initialLoad();
-		if (status === 'offline') return retry();
-
-		proUser.set(!!validity);
-		// if ($isPWA) return showAd.set(false);
-		showAd.set(!validity);
-	};
-
-	onMount(async () => {
-		const { expiryDate, storedKey } = await accessKey.initialLoad();
-		dateExpired = expiryDate;
-		savedKey = storedKey;
-	});
-
-	const showAd = getContext('showAd');
 	const closeWelcomeScreen = getContext('closeGreeting');
+	// 「不再提示」勾选状态：提交时写入 localStorage，下次启动由 +page.svelte 读取跳过弹窗
+	let dontShowAgain = false;
 	const handleSubmit = () => {
 		playSfx();
-		initTrack();
+		if (dontShowAgain) {
+			try {
+				localStorage.setItem('hsrws-hide-welcome', '1');
+			} catch (e) {
+				// 隐私模式等写入失败不影响进入模拟器，仅下次仍会弹窗
+				console.error('保存「不再提示」失败：', e);
+			}
+		}
 		closeWelcomeScreen();
-		verifyKey();
 	};
 </script>
 
@@ -52,58 +32,32 @@
 			<div class="header">
 				<h1>{$t('title')}</h1>
 				<h2>{$t('welcomeMsg')}</h2>
+				<p class="intro">{$t('welcomeIntro')}</p>
 
 				{#if !browserDetect().isSupported && $isPWA}
 					<div class="updates adExpired">
-						<strong>
-							We highly recommend you to install
-							<span style="display: inline; color:#5ab3ff"> Google Chrome </span>
-							First, Maybe some features won't work properly for now!
-						</strong>
-					</div>
-				{:else if dateExpired && dateExpired !== 'none'}
-					<div class="updates adExpired">
-						<div>
-							{@html $t('menu.keyExpiredNotice', {
-								values: { key: `<b>${savedKey}</b>`, date: `<b>${dateExpired}</b>` }
-							})}
-							<br />
-							<a
-								href="https://ko-fi.com/post/AdFree-Wish-Simulator-Enjoy-Simulator-Without-Ads-G2G2DQ57O"
-								target="_blank"
-							>
-								{$t('menu.getNewKey')}
-							</a>
-							or
-							<a
-								style="color: #be1e2d;"
-								target="_blank"
-								href="https://trakteer.id/mantan21/showcase/access-key-untuk-membership-SJ9X6"
-							>
-								Here for Indonesian!
-							</a>
-						</div>
+						<strong> {$t('browserNotice')} </strong>
 					</div>
 				{:else}
 					<div class="updates">
-						{#each [...logs.filter(({ featured }) => featured)].reverse() as { date, changes } (changes)}
+						{#each brief.slice(0, 1) as { ver, lines }}
 							<span>
-								<i class="tgl"> {date} </i>
+								<i class="tgl"> v{ver} </i>
 							</span>
-							{#each changes as txt (txt)}
-								<p>{@html txt}</p>
+							{#each lines as txt (txt)}
+								<p>{txt}</p>
 							{/each}
 							<div style="height: .5rem"></div>
 						{/each}
 					</div>
 				{/if}
-
-				<h3 class="disclaimer">
-					{$t('disclaimer')}
-				</h3>
 			</div>
 
 			<div class="footer">
+				<label class="dont-show">
+					<input type="checkbox" bind:checked={dontShowAgain} />
+					<span>{$t('dontShowAgain')}</span>
+				</label>
 				<button on:click={handleSubmit}>
 					<i class="hsr-bulb"></i>
 					<span> {$t('loadSimulator')} </span>
@@ -126,13 +80,6 @@
 		align-items: center;
 		background-color: rgba(0, 0, 0, 0.2);
 		backdrop-filter: blur(10px);
-	}
-	a {
-		text-decoration: underline;
-		transition: all 0.25s;
-	}
-	a:hover {
-		color: orange;
 	}
 
 	.header {
@@ -294,11 +241,29 @@
 		padding: 1rem;
 	}
 
-	.disclaimer {
-		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-		font-size: 90%;
-		font-weight: normal;
-		padding-top: 2%;
-		line-height: 100%;
+	.intro {
+		color: rgba(255, 255, 255, 0.7);
+		font-size: 88%;
+		line-height: 160%;
+		text-align: left;
+		padding: 2% 4% 0;
+	}
+
+	.dont-show {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		color: rgba(255, 255, 255, 0.75);
+		font-size: 85%;
+		padding-bottom: 2%;
+		cursor: pointer;
+		user-select: none;
+	}
+
+	.dont-show input {
+		width: 0.9rem;
+		height: 0.9rem;
+		accent-color: #e3a023;
+		cursor: pointer;
 	}
 </style>

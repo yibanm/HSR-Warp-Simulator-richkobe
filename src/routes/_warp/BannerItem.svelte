@@ -23,6 +23,7 @@
 	import LightconeFrame from './banner-card/_frame-lightcone.svelte';
 	import RegularFrame from './banner-card/_frame-regular.svelte';
 	import StarterFrame from './banner-card/_frame-starter.svelte';
+	import MemberFrame from './banner-card/_frame-member.svelte';
 	import ProbabilityEditor from './probability-editor.svelte';
 	import FrameGroup from './banner-card/_frame-group.svelte';
 
@@ -121,6 +122,13 @@
 			<div class="frame">
 				<FrameGroup {item} />
 			</div>
+
+			<!-- 点名卡池（中文点名版新增）：背景复用常驻跃迁立绘，卡面显示名单摘要 -->
+		{:else if banner === 'member'}
+			<BnRegular />
+			<div class="frame">
+				<MemberFrame />
+			</div>
 		{/if}
 
 		<!-- Probability Controller -->
@@ -144,7 +152,7 @@
 {/if}
 
 {#if showModalReset}
-	<Modal title="Back to Default" on:cancel={cancelModal} on:confirm={confirmModal}>
+	<Modal title="恢复默认" on:cancel={cancelModal} on:confirm={confirmModal}>
 		<div class="modal-content">
 			<p>
 				{@html $t('editor.resetPrompt', { values: { banner: $t(`banner.${banner}`) } })}

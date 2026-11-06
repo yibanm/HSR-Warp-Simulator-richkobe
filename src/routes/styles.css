@@ -1,13 +1,18 @@
 :root {
 	--hsr-neue:
 		'StarRail Neue', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+	/* 中文主字体栈（2026-11-05 修）：上游 optimized_zh_web.woff2 是子集字体，只含游戏原有汉字，
+	   本版新增文案（点名/赞赏/开源等）不在子集内 → 同句混排两种字体，粗细高低不齐。
+	   中文一律走系统黑体栈保证同句同字体；拉丁/数字仍优先游戏字体保持风格。 */
 	--hsr-os-font:
-		'StarRail_Global_Web', 'StarRail_JA_Web', 'StarRail_ZH_Web', 'Segoe UI', Roboto, Oxygen, Ubuntu,
-		Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+		'StarRail_Global_Web', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB',
+		'Noto Sans CJK SC', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+		'Helvetica Neue', sans-serif;
 	--hsr-ja-font:
 		'StarRail_JA_Web', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 	--hsr-zh-font:
-		'StarRail_ZH_Web', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+		'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', 'Segoe UI', Roboto,
+		Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 	--color-text: #e7e8ea;
 	--color-second: #e6cb94;
 }

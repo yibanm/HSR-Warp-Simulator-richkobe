@@ -45,9 +45,11 @@ registerRoute(
 
 		const imagePath = url.pathname.startsWith('/internal/immutable/assets');
 		const iconPath = url.pathname.startsWith('/icons');
+		// 赞赏码等 static 根下图片（关于页）也须离线可用，否则断网二次启动破图
+		const donatePath = url.pathname.startsWith('/donate');
 		const matchImage = url.href.match(new RegExp('.(?:svg|webp|jpg|png|jpeg)')) || [];
 		const isMatch = matchImage.length > 0;
-		const isImage = (request.destination === 'image' || isMatch) && (imagePath || iconPath);
+		const isImage = (request.destination === 'image' || isMatch) && (imagePath || iconPath || donatePath);
 
 		return isAudio || isImage || isVideo;
 	},

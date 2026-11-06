@@ -1,7 +1,7 @@
 import path from 'path';
+import fs from 'fs';
 import { defineConfig } from 'vite';
 import devtoolsJson from 'vite-plugin-devtools-json';
-import { sentrySvelteKit } from '@sentry/sveltekit';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { imagetools } from 'vite-imagetools';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -19,76 +19,23 @@ const icons = iconSize.map((size) => {
 	return iconObj;
 });
 
-const screenshots = [
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/n74SYpr/sc1.jpg',
-		label: 'Section 1',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/CPPydzc/sc2.jpg',
-		label: 'Section 2',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/Q9DgGMN/sc3.jpg',
-		label: 'Section 3',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/pLNZBv2/sc4.jpg',
-		label: 'Section 4',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/q7K3vkv/sc5.jpg',
-		label: 'Section 5',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/34Ddkgp/sc6.jpg',
-		label: 'Section 6',
-		type: 'image/jpg'
-	},
-	{
-		sizes: '640x360',
-		src: 'https://i.ibb.co/LSKRZgC/sc7.jpg',
-		label: 'Section 7',
-		type: 'image/jpg'
-	}
-];
-
 const manifest = {
 	orientation: 'landscape',
-	name: 'Honkai: Star Rail Warp Simulator',
-	short_name: 'HSR Warp Sim',
-	description:
-		"Just a Realistic Gacha Simulator for Honkai: Star Rail. Let's Simulate your luck unlimited times!",
+	name: '崩坏：星穹铁道 跃迁模拟器（点名版）',
+	short_name: '星铁点名版',
+	description: '崩坏：星穹铁道抽卡模拟器中文点名版：完全本地运行、无需联网、不收集任何个人信息。',
 	theme_color: '#000000',
 	background_color: '#000000',
 	scope: '/',
 	start_url: '/?pwasc=hsr-homescreen',
-	id: 'hsr.wishsimulator.app',
+	id: 'hsr-warp-simulator-richkobe',
 	categories: ['games', 'utilities'],
 	dir: 'auto',
 	display: 'fullscreen',
-	handle_links: 'preferred',
 	icons,
-	screenshots,
-	prefer_related_applications: true,
 	launch_handler: {
 		client_mode: ['focus-existing, auto']
 	},
-	scope_extensions: [
-		{ origin: 'hsr.wishsimulator.app' },
-		{ origin: 'hsr-warp-simulator.pages.dev' }
-	],
 	display_override: [
 		'fullscreen',
 		'window-controls-overlay',
@@ -96,45 +43,20 @@ const manifest = {
 		'minimal-ui',
 		'browser'
 	],
-	shortcuts: [
-		{
-			name: 'Feedback',
-			url: '/feedback',
-			description: 'Give a Comment about the Simulator.'
-		}
-	],
 	edge_side_panel: {
 		preferred_width: 412
-	},
-	related_applications: [
-		{
-			platform: 'webapp',
-			url: 'https://hsr.wishsimulator.app/appmanifest.json'
-		},
-		{
-			platform: 'play',
-			url: 'https://play.google.com/store/apps/details?id=hsr.wishsimulator.app',
-			id: 'hsr.wishsimulator.app'
-		}
-	]
+	}
 };
 
 export default defineConfig({
+	// 版本号构建期注入为字面量（关于页显示）。不能 import package.json：
+	// Vite dev server 对 /package.json?import 返回 403（fs 保护），实测菜单整页加载失败。
+	define: {
+		__APP_VERSION__: JSON.stringify(
+			JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8')).version
+		)
+	},
 	plugins: [
-		sentrySvelteKit({
-			sentryUrl: 'https://491991121826437a991c013d90a8afc1@sink.mantan.dev',
-			authToken: 'ebdc849317a4a63604689ba0562be794730f8d4b4f557f8590496226bc8a930b',
-			bundleSizeOptimizations: {
-				excludeReplayIframe: true,
-				excludeReplayShadowDom: true,
-				excludeReplayWorker: true
-			},
-			sourcemaps: {
-				filesToDeleteAfterUpload: ['./build/internal/immutable/**/*.map', './build/sw.js.map']
-			},
-			project: 'hsr-warp-sim',
-			org: 'mantan-dev'
-		}),
 		imagetools({}),
 		sveltekit(),
 		devtoolsJson(),

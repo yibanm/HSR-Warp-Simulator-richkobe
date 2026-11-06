@@ -36,7 +36,7 @@
 <div class="content" in:fade|global={{ duration: 500, delay: 250 }}>
 	{#if $probEdit}
 		<div class="banner-name">
-			{$t('banner.regular')} Configuration
+			{$t('editor.bannerConfig', { values: { banner: $t('banner.regular') } })}
 		</div>
 	{:else}
 		<div class="banner-name">{$t('banner.regular')}</div>

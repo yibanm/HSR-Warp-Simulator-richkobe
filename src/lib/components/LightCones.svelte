@@ -1,45 +1,16 @@
 <script>
 	import { t } from 'svelte-i18n';
-	import { fade, fly } from 'svelte/transition';
-	import { assets, liteMode, liveconeList } from '$lib/stores/app-store';
+	import { fly } from 'svelte/transition';
+	import { assets, liteMode } from '$lib/stores/app-store';
 	import { lazyLoad } from '$lib/helpers/lazyload';
-	import { fetchMedia, toBlob } from '$lib/helpers/dataAPI/api-fetcher';
 
 	export let item = '';
 	export let size = 'medium';
 	export let animate = false;
-	export let animationID = null;
 
 	const transitionFly = (node, args) => {
 		if (!animate) return;
 		return fly(node, args);
-	};
-
-	const updateStore = async (videoURL, vID) => {
-		const obj = {
-			mp4: await toBlob(videoURL.mp4),
-			webm: await toBlob(videoURL.webm)
-		};
-		liveconeList.update((v) => {
-			v[vID] = obj;
-			return v;
-		});
-	};
-
-	const loadVideo = async (vID) => {
-		const storedURL = $liveconeList[vID];
-		if (storedURL) return { ...storedURL, success: true };
-
-		// fetch New
-		const { status, formats = {}, download } = await fetchMedia(vID, 'video');
-		if (status === 'error') return { success: false };
-
-		const mp4 = formats['video/mp4'] || download;
-		const webm = formats['video/webm'] || null;
-		if (!(mp4 || webm)) return { success: false };
-
-		updateStore({ mp4, webm }, vID);
-		return { mp4, webm, success: true };
 	};
 </script>
 
@@ -57,19 +28,6 @@
 	{/if}
 	<img use:lazyLoad={$assets[`lc/${size}/${item}`]} crossorigin="anonymous" alt={$t(item)} />
 
-	{#if animationID && size !== 'small'}
-		{#await loadVideo(animationID) then { webm, mp4, success }}
-			{#if success}
-				<div class="videoWrapper" in:fade|global>
-					<video autoplay loop muted>
-						<source src={webm} type="video/webm" crossorigin="anonymous" />
-						<source src={mp4} type="video/mp4" crossorigin="anonymous" />
-						<track kind="captions" />
-					</video>
-				</div>
-			{/if}
-		{/await}
-	{/if}
 	<div
 		class="layer layer-front"
 		in:transitionFly|global={{ y: -300, x: -30, duration: 500, opacity: 1 }}
@@ -82,27 +40,6 @@
 		height: auto;
 		aspect-ratio: 53/74;
 		position: relative;
-	}
-
-	.videoWrapper {
-		width: 100%;
-		height: 100%;
-		position: absolute;
-		top: 0;
-		left: 0;
-		overflow: hidden;
-		border: 0.3rem solid #fff;
-	}
-
-	video {
-		width: inherit;
-		height: auto;
-		position: absolute;
-		top: 0;
-		left: 0;
-		/* top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%); */
 	}
 
 	img {

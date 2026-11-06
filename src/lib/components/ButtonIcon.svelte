@@ -10,7 +10,7 @@
 	};
 </script>
 
-<button aria-label="action" on:click|preventDefault|stopPropagation={handleClose} class:dark>
+<button aria-label="操作" on:click|preventDefault|stopPropagation={handleClose} class:dark>
 	<i class="hsr-{icon}"></i>
 </button>
 

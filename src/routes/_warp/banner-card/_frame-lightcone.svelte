@@ -1,8 +1,7 @@
 <script>
 	import { t } from 'svelte-i18n';
 	import { fade } from '$lib/helpers/transition';
-	import { animatedLC, liteMode, probEdit } from '$lib/stores/app-store';
-	import { getLCDetails } from '$lib/helpers/gacha/gacha-base';
+	import { probEdit } from '$lib/stores/app-store';
 
 	import LightCones from '$lib/components/LightCones.svelte';
 	import Path from '$lib/components/Path.svelte';
@@ -11,7 +10,6 @@
 	export let item = {};
 
 	const lightcones = item.rateup.map((d) => ({ name: d, rarity: 4 }));
-	const { animationID } = getLCDetails(item.featured) || null;
 </script>
 
 <div class="content">
@@ -61,10 +59,7 @@
 			</div>
 		</div>
 		<div class="featured-lightcone" transition:fade|global>
-			<LightCones
-				item={item.featured}
-				animationID={$animatedLC && !$liteMode ? animationID : null}
-			/>
+			<LightCones item={item.featured} />
 		</div>
 	{/if}
 </div>

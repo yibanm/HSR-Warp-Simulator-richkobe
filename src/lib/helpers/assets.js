@@ -1,6 +1,10 @@
 // Load and procces images
+// 三档立绘（640/1280/2000w）：卡面 srcset 的 min-width:1280px 分支引用 large 档，
+// 缺 large 时该 source 的 srcset 为空 → 宽屏回退 small(640w) → 大卡面发糊（老 bug，勿回退档数）。
+// 手机端 ≤100M 的裁档不在 web 构建做（env 条件 glob 双分支 tree-shake 实测不生效，两档构建体积不变）；
+// 等安卓/Capacitor 壳落地时在该壳的打包管线里裁 large 档（手机屏宽 <1280 永远选不到 large）。
 const charSplashArt4 = import.meta.glob('@images/characters/splash-art/4star/*.webp', {
-	query: { w: '640;1280', as: 'picture' },
+	query: { w: '640;1280;2000', as: 'picture' },
 	import: 'default',
 	eager: true
 });
@@ -104,7 +108,6 @@ const images = [
 			'departure-bg.webp',
 			'gachainfo-bg.webp',
 			'gachainfo-bg2.webp',
-			'phonograph-bg.webp',
 			'stellar-bg.webp',
 			'warp-bg.webp'
 		]
@@ -113,15 +116,6 @@ const images = [
 		dir: 'utils',
 		paths: [
 			'additional-reward.svg',
-			'album_of-snow-and-ember.webp',
-			'album_out-of-control.webp',
-			'album_svah-sanishyu.webp',
-			'album_the-flapper-sinthome.webp',
-			'album_experience-the-paths-1.webp',
-			'album_experience-the-paths-2.webp',
-			'album_inside.webp',
-			'album_more-ost.webp',
-			'album_custom-musics.webp',
 			'circle-ornament1.svg',
 			'circle-ornament2.svg',
 			'combat-fire.webp',
@@ -139,8 +133,6 @@ const images = [
 			'method-imaginary-money.webp',
 			'method-tears.webp',
 			'method-firefly-savings.webp',
-			'music.svg',
-			'music-disc.webp',
 			'oneiric-shard.webp',
 			'oneiric-60.webp',
 			'oneiric-300.webp',
@@ -161,8 +153,6 @@ const images = [
 	}
 ];
 
-const videos = ['phonograph1.mp4', 'phonograph2.mp4'];
-
 const bgList = () => {
 	const paths = [];
 	for (let i = 0; i < 14; i++) {
@@ -182,12 +172,6 @@ export const listingAssets = () => {
 			const item = { path: pathdir, asset: path };
 			arr.push(item);
 		});
-	});
-
-	videos.forEach((v) => {
-		const pathdir = `/videos/${v}`;
-		const item = { path: pathdir, asset: v };
-		arr.push(item);
 	});
 
 	return arr;

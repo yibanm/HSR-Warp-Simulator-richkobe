@@ -4,13 +4,11 @@
 	import { fade } from 'svelte/transition';
 	import { t } from 'svelte-i18n';
 
-	import { liteMode, viewportHeight } from '$lib/stores/app-store';
+	import { liteMode, viewportHeight, menuRequest } from '$lib/stores/app-store';
 	import { cookie } from '$lib/helpers/dataAPI/api-cookie';
 	import { storageReset } from '$lib/helpers/dataAPI/storage-reset';
 	import { localConfig } from '$lib/helpers/dataAPI/api-localstorage';
 	import { playSfx } from '$lib/helpers/sounds/audiofx';
-	import { initTrack, isPlaying } from '$lib/helpers/sounds/phonograph';
-	import { activeBacksound, muted } from '$lib/stores/phonograph-store';
 	import { check as checkExpress } from '$lib/helpers/express-loader';
 
 	import Modal from '$lib/components/Modal.svelte';
@@ -39,23 +37,26 @@
 		}
 	};
 
-	// toggle Chat
-	const toggleChat = getContext('chatToggle');
-
 	// Toggle Show Menu
 	let showMenu = false;
+	// 打开菜单时捕获跨模块直达请求（如点名卡面「名单管理」），消费后清空 store
+	let initialMenu = 'settings';
 	const toggleShowMenu = () => {
 		playSfx(showMenu ? 'setting-close' : 'setting-click');
 		showMenu = !showMenu;
+		if (showMenu) {
+			initialMenu = $menuRequest || 'settings';
+			if ($menuRequest) menuRequest.set('');
+		}
 	};
 	setContext('toggleMenu', toggleShowMenu);
 
-	// Show Modal
-	const navigate = getContext('navigate');
-	const openPhonograph = () => {
-		playSfx();
-		navigate('phonograph');
-	};
+	// 跨模块直达请求（点名卡面「名单管理」按钮）：store 一写入就开菜单并定位目标页
+	$: if (browser && $menuRequest && !showMenu) {
+		showMenu = true;
+		initialMenu = $menuRequest;
+		menuRequest.set('');
+	}
 
 	// Modal
 	let isModalOpen = false;
@@ -94,8 +95,6 @@
 
 		if (keepSetting) return;
 
-		const soundOn = isPlaying($activeBacksound.sourceID);
-		if (!soundOn) initTrack();
 		readyToPull.set(await checkExpress());
 		localConfig.set('litemode', $liteMode);
 	};
@@ -138,32 +137,22 @@
 
 <div class="menu" class:hide={!showToggle} transition:fade={{ duration: 250 }}>
 	<div class="wrapper">
-		<button title="Options" aria-label="Settings" on:click={toggleShowMenu}>
+		<button title="选项" aria-label="设置" on:click={toggleShowMenu}>
 			<i class="hsr-cog"></i>
 		</button>
 
-		{#if !$muted.bgm}
-			<button title="PhonoGraph" aria-label="Phonograph" on:click={openPhonograph}>
-				<i class="hsr-phonograph"></i>
-			</button>
-		{/if}
-
-		<button title="Feedback" aria-label="Chatbox" on:click={toggleChat}>
-			<i class="hsr-chat"></i>
-		</button>
-
-		<button on:click={handleFullscreen} aria-label="Fullscreen" title="Fullscreen">
+		<button on:click={handleFullscreen} aria-label="全屏" title="全屏">
 			<i class="hsr-{!fullscreen ? 'fullscreen' : 'shrink'}"></i>
 		</button>
 
-		<button class="toggle" on:click={toggleMenuList} aria-label="Show Menu" title="Show Menu">
+		<button class="toggle" on:click={toggleMenuList} aria-label="展开菜单" title="展开菜单">
 			<i class="hsr-chevron-right"></i>
 		</button>
 	</div>
 </div>
 
 {#if showMenu}
-	<MainMenu />
+	<MainMenu initialMenu={initialMenu} />
 {/if}
 
 <style>

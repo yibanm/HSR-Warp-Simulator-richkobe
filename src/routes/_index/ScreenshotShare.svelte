@@ -113,7 +113,7 @@
 			<Icon type="stellarJade" /> × {initialAmount.shareReward}
 		</div>
 	{/if}
-	<button class="btn-berbagi" on:click={takeShot} aria-label="Share Now" disabled={loading}>
+	<button class="btn-berbagi" on:click={takeShot} aria-label="立即分享" disabled={loading}>
 		<i class="hsr-share"></i>
 	</button>
 </div>

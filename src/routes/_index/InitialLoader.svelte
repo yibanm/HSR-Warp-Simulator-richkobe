@@ -5,59 +5,83 @@
 
 	let anyError = false;
 	let current = 0;
+	// 看门狗：20 秒内一个素材都没拉完（current 恒 0）说明加载流程根本没跑起来
+	// （壳环境 hydration 失败 / SW 拦截等），弹兜底框给用户「重新加载/直接进入」，
+	// 不再永久黑屏（用户 2026-11-05 壳内卡「正在连接」实测）
+	let stuck = false;
 	$: percentage = current > 99 ? 100 : current.toFixed();
 
 	const handleLoaded = getContext('loaded');
 	const assetList = itemList();
 
-	const assetInit = async () => {
-		const arr = [];
-		let i = 0;
-		const raw = listingAssets();
-		for await (const assetData of raw) {
-			i++;
-			const { path, asset } = assetData;
-			const blob = await blobAssets(path);
-			if (blob === 'error') anyError = true;
-			arr.push({ url: blob, name: asset });
-			current = (i / raw.length) * 100;
-		}
+	// 单个素材拉取超时：上游是「串行 for-await 逐个 fetch」，任何一个请求挂起
+	// （网络抖动 / dev 下 imagetools 实时转换卡住）整个初始化就永久停在黑屏，
+	// handleLoaded 永远不被调用。加超时让挂起的请求落为 error，走「直接进入」兜底。
+	const FETCH_TIMEOUT_MS = 15000;
+	const withTimeout = (promise, ms) =>
+		Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve('error'), ms))]);
 
-		const loadedAssets = await Promise.all(arr);
+	// 并发度：串行拉 ~500 个素材太慢（用户感知为长时间黑屏），限并发提速又不打爆连接池
+	const CONCURRENCY = 8;
+
+	const assetInit = async () => {
+		const raw = listingAssets();
+		const results = new Array(raw.length);
+		let cursor = 0;
+		let done = 0;
+
+		const worker = async () => {
+			while (cursor < raw.length) {
+				const idx = cursor++;
+				const { path, asset } = raw[idx];
+				const blob = await withTimeout(blobAssets(path), FETCH_TIMEOUT_MS);
+				if (blob === 'error') anyError = true;
+				results[idx] = { url: blob, name: asset };
+				done++;
+				current = (done / raw.length) * 100;
+			}
+		};
+
+		await Promise.all(Array.from({ length: Math.min(CONCURRENCY, raw.length) }, worker));
+
 		assets.update((pv) => {
 			pv = {};
-			loadedAssets.forEach(({ url, name }) => (pv[name] = url));
+			results.filter(Boolean).forEach(({ url, name }) => (pv[name] = url));
 			return { ...pv, ...assetList };
 		});
 
 		if (anyError === false) handleLoaded();
 	};
 
-	onMount(assetInit);
+	onMount(() => {
+		assetInit();
+		setTimeout(() => {
+			if (current === 0 && !anyError) stuck = true;
+		}, 20000);
+	});
 </script>
 
-{#if anyError}
+{#if anyError || stuck}
 	<div class="modal">
 		<div class="modal-content">
 			<div class="msg">
-				An error occurred while trying to load some assets, this may affect your wish experience.
-				<br />
-				<small>
+				{#if stuck}
+					加载流程长时间没有响应，可能是本地缓存或运行环境异常。
+					<br />
 					<small>
-						If you think this is a mistake, please contact me on
-						<a
-							href="https://discord.com/users/523179264116523018"
-							target="_blank"
-							style="color: #7289da"
-						>
-							Discord
-						</a>!
+						<small> 你可以重新加载试试，或直接进入模拟器。 </small>
 					</small>
-				</small>
+				{:else}
+					部分素材加载失败，可能影响抽卡动画与画面的显示效果。
+					<br />
+					<small>
+						<small> 你可以重新加载试试，或直接进入模拟器。 </small>
+					</small>
+				{/if}
 			</div>
 			<div class="btn">
-				<button class="reload" on:click={() => window.location.reload()}>Reload</button>
-				<button class="open" on:click={handleLoaded}>Open Anyway</button>
+				<button class="reload" on:click={() => window.location.reload()}>重新加载</button>
+				<button class="open" on:click={handleLoaded}>直接进入</button>
 			</div>
 		</div>
 	</div>
@@ -71,10 +95,10 @@
 		<div class="ornament ornament2"></div>
 		<div class="ornament ornament3"></div>
 		<div class="text">
-			<div class="loading">{percentage < 1 ? 'CONNECTING' : 'LOADING'}</div>
+			<div class="loading">正在加载</div>
 			{#if percentage > 0}
 				<div class="percentage">{percentage}</div>
-				<div class="hsr-text">LOADING</div>
+				<div class="hsr-text">崩坏星穹铁道</div>
 			{/if}
 		</div>
 	</div>
@@ -179,7 +203,7 @@
 	}
 
 	.hsr-text {
-		font-family: var(--hsr-neue);
+		font-family: var(--hsr-os-font);
 		position: absolute;
 		left: 50%;
 		bottom: 83%;

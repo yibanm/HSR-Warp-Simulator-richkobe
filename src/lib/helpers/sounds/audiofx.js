@@ -1,4 +1,4 @@
-import { Howl } from 'howler';
+import { Howl, Howler } from 'howler';
 import { localConfig } from '$lib/helpers/dataAPI/api-localstorage';
 import { cookie } from '$lib/helpers/dataAPI/api-cookie';
 import { browser } from '$app/environment';
@@ -17,11 +17,6 @@ const sfxList = [
 	'express-5star',
 	'item-obtained',
 	'modal-close',
-	'music-close',
-	'music-loaded',
-	'music-select1',
-	'music-select2',
-	'music-set',
 	'paper-flip',
 	'reveal-3star',
 	'reveal-4star',
@@ -62,6 +57,21 @@ const initSFX = () => {
 	}, {});
 };
 initSFX();
+
+// 壳环境（WebView2）AudioContext 的解锁时机比浏览器更不可靠。howler 官方 autoUnlock
+// 默认已开启（源码 self.autoUnlock = true），无需重复设置；这里只加一层首次手势兜底：
+// 仅当 ctx 仍为 suspended 时 resume，幂等、无副作用。
+if (browser) {
+	const unlock = () => {
+		if (Howler.ctx?.state === 'suspended') Howler.ctx.resume();
+		document.removeEventListener('pointerdown', unlock, true);
+		document.removeEventListener('mousedown', unlock, true);
+		document.removeEventListener('keydown', unlock, true);
+	};
+	document.addEventListener('pointerdown', unlock, true);
+	document.addEventListener('mousedown', unlock, true);
+	document.addEventListener('keydown', unlock, true);
+}
 
 const sfxids = {};
 export const playSfx = (nameOfSoundfx = 'click') => {

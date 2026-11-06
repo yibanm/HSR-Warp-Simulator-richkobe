@@ -3,7 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { t } from 'svelte-i18n';
 
-	import { animatedLC, assets, liteMode } from '$lib/stores/app-store';
+	import { assets } from '$lib/stores/app-store';
 	import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
 	import { lazyLoad } from '$lib/helpers/lazyload';
 	import { getCharDetails, getLCDetails } from '$lib/helpers/gacha/gacha-base';
@@ -13,7 +13,6 @@
 	import LightCones from '$lib/components/LightCones.svelte';
 	import ScreenshotShare from '../_index/ScreenshotShare.svelte';
 	import SplashartInfo from '../_warp/warp-result/_splashart-info.svelte';
-	import { playSfx } from '$lib/helpers/sounds/audiofx';
 
 	export let name = '';
 	export let qty = 0;
@@ -51,12 +50,6 @@
 
 		return { ...data, time };
 	};
-
-	$: playLC = $animatedLC && !$liteMode;
-	const playPause = (v) => {
-		playSfx('click2');
-		playLC = v;
-	};
 </script>
 
 <section>
@@ -72,15 +65,15 @@
 
 		<!-- Show on Shareable screen -->
 		<div class="tanda-air">
-			<div class="via">WARPVIA</div>
+			<div class="via">点名抽卡</div>
 			<div class="site">
-				<span> HSR.WISHSIMULATOR.APP </span>
+				<span> 星穹铁道·点名版 </span>
 			</div>
 		</div>
 		<!-- End Show on Shareable screen -->
 
 		<div class="container">
-			{#await loadItem(name) then { path, rarity, combat_type, splashartOffset, time, animationID }}
+			{#await loadItem(name) then { path, rarity, combat_type, splashartOffset, time }}
 				{#if qty < 1}
 					<div class="not-indexed">
 						<span>{$t('collection.notOwned')}</span>
@@ -92,11 +85,7 @@
 						<div class="item-art lightcone">
 							<div class="item-content">
 								<div class="lightcone-item">
-									<LightCones
-										item={name}
-										size="large"
-										animationID={qty > 0 && playLC ? animationID : null}
-									/>
+									<LightCones item={name} size="large" />
 								</div>
 							</div>
 						</div>
@@ -124,17 +113,6 @@
 
 					<div class="right-bottom">
 						<ScreenshotShare relative />
-						{#if animationID}
-							<div class="playButton">
-								<button
-									aria-label="Player Control"
-									class="play"
-									on:click={() => playPause(!playLC)}
-								>
-									<i class="hsr-{playLC ? 'pause' : 'play'}"></i>
-								</button>
-							</div>
-						{/if}
 					</div>
 				{/if}
 			{/await}
@@ -293,31 +271,6 @@
 		z-index: +1;
 		display: flex;
 		align-items: center;
-	}
-
-	button.play {
-		margin-left: 0.5rem;
-		background-color: rgba(255, 255, 255, 0.9);
-		width: 40px;
-		aspect-ratio: 1/1;
-		border-radius: 100%;
-		font-size: 1.75rem;
-		transition: all 0.25s;
-		display: inline-flex;
-		line-height: 0;
-		justify-content: center;
-		align-items: center;
-	}
-	button.play:disabled {
-		filter: brightness(0.5);
-	}
-	button.play:active {
-		transform: scale(0.95);
-		filter: brightness(0.8);
-	}
-	:global(.mobileLandscape) button.play {
-		font-size: 1.5rem;
-		width: 2rem;
 	}
 
 	@media screen and (max-width: 600px) {

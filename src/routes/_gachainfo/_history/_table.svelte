@@ -3,6 +3,7 @@
 	import { t } from 'svelte-i18n';
 	import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
 	import { identifyBanner } from '$lib/helpers/banner-loader';
+	import { memberDisplayName } from '$lib/helpers/rollcall/display';
 
 	export let banner;
 	export let filter = '';
@@ -41,7 +42,7 @@
 					<div class="cell">{$t('nodata')}</div>
 				</div>
 			{:else}
-				{#each dataToShow as { name, type, rarity, time, pity, bannerID, status }, i (dataToShow[i])}
+				{#each dataToShow as { name, type, rarity, time, pity, bannerID, status, chineseChar, iconType }, i (dataToShow[i])}
 					{#if i > (page.activepage - 1) * page.itemPerPage - 1 && i < page.itemPerPage * page.activepage}
 						<div class="row">
 							<div class="cell cell0 star{rarity}">
@@ -52,13 +53,21 @@
 							</div>
 							<div class="cell cell1">{$t(type)}</div>
 							<div class="cell cell2 star{rarity}">
-								{$t(name)}
+								{#if type === 'member'}
+									<!-- 点名记录：name 可能是游戏 slug（预置名单）或用户录入的人名（自定义名单），
+									     前者要查语言包，后者查不到需回退原值，统一交给 memberDisplayName -->
+									{memberDisplayName({ name, chineseChar, iconType }, $t)}
+								{:else}
+									{$t(name)}
+								{/if}
 								{#if rarity > 3}
 									( {rarity}★ )
 								{/if}
 							</div>
 							<div class="cell cell3">
-								{#if bannerID}
+								{#if type === 'member'}
+									<span class="member">{$t('banner.member')}</span>
+								{:else if bannerID}
 									{@const { bannerName } = identifyBanner(bannerID)}
 									<span class={banner}>
 										{$t(`banner.${bannerName}`)}
@@ -89,6 +98,9 @@
 	}
 	span.lightcone-event {
 		color: #3d81ce;
+	}
+	span.member {
+		color: #9d8563;
 	}
 
 	span.status {

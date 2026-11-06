@@ -32,9 +32,9 @@
 			<div class="right">
 				<div class="item-type">
 					{#if !combatType}
-						<span>{$t('lightcone')} </span> <small>Lightcone</small>
+						<span>{$t('lightcone')}</span>
 					{:else}
-						<span>{$t('character')} </span> <small>Character</small>
+						<span>{$t('character')}</span>
 					{/if}
 				</div>
 				<div class="name">{$t(name)}</div>
@@ -139,10 +139,6 @@
 		padding: calc(0.0015 * var(--screen-width)) calc(0.005 * var(--screen-width));
 		white-space: nowrap;
 		font-size: calc(0.01 * var(--screen-width));
-	}
-	.item-type small {
-		font-family: var(--hsr-neue);
-		font-size: calc(0.0075 * var(--screen-width));
 	}
 
 	.name {

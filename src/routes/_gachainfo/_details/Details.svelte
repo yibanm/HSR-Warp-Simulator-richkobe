@@ -10,7 +10,6 @@
 		getLCDetails
 	} from '$lib/helpers/gacha/gacha-base';
 
-	import Iklan from '$lib/components/Iklan.svelte';
 	import Description from './_description.svelte';
 	import ItemCard from './_item-card.svelte';
 	import Table from './_table.svelte';
@@ -115,8 +114,6 @@
 			{/each}
 		</div>
 	{/if}
-
-	<Iklan type="banner" />
 
 	<h2>{$t('details.heading')}</h2>
 	<Description

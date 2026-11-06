@@ -30,7 +30,7 @@
 
 	{#if resizeable}
 		<div class="toggle">
-			<button aria-label="sidebar" on:click={() => toggleShowAside()}>
+			<button aria-label="侧边栏" on:click={() => toggleShowAside()}>
 				<i class="hsr-chevron-right"></i>
 			</button>
 		</div>

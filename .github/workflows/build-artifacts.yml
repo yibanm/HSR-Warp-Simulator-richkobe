@@ -1,0 +1,185 @@
+# 云端构建（GitHub Actions）
+#
+# 遵循 CLAUDE.md 0.11：推开发分支触发构建，产物上传为 workflow artifact，
+# 由本地用 `gh run download` 拉回 dist-release/ 供用户测试；
+# 未经用户明确指示，不合并主干、不打 tag、不创建 Release。
+#
+# 产物命名遵循 CLAUDE.md 0.10（软件名-版本-平台.扩展名）：
+#   - hsr-warp-roll-richkobe-<版本>-windows-x64-setup.exe    Windows 安装版（Tauri NSIS bundle）
+#   - hsr-warp-roll-richkobe-<版本>-windows-x64-portable.zip Windows 便携版（单文件 exe）
+#
+# 与姊妹项目 26.GenshinWishRoll 的差异：
+#   - 包管理是 pnpm 9（package.json 的 packageManager 钉版，sharp 原生二进制需锁版本），
+#     故用 pnpm/action-setup 而非 npm ci；
+#   - 安装器直接用 Tauri 自带 NSIS bundle（src-tauri/tauri.conf.json 已配 MUI2 模板、
+#     headerImage/sidebarImage/installerIcon），不需要像原神版那样 --no-bundle 再自装 NSIS 编译；
+#   - 无安卓壳，不出 APK。
+name: build-artifacts
+
+on:
+  push:
+    branches: [dev, build, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # 不写 version：交给 package.json 的 packageManager 字段（pnpm@9.15.9）决定，
+          # 避免 CI 与本地版本漂移
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # Tauri 需要 Rust 工具链编译原生壳（WebView2 由系统提供，不打包进产物）
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Cargo 缓存：Rust 首次编译需数分钟。用 MIT 的 actions/cache 而非
+      # Swatinem/rust-cache（后者 LGPL-3.0，传染性许可证，按项目规则不引入 CI 流程）
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-tauri-${{ hashFiles('src-tauri/Cargo.lock', 'src-tauri/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-tauri-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Read version from package.json
+        id: ver
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # Tauri bundle：tauri.conf.json 的 beforeBuildCommand 会跑 pnpm build，
+      # 故这里不需要单独一步 build web bundle
+      - name: Build Tauri app (NSIS bundle)
+        run: npx tauri build --bundles nsis
+        env:
+          # 不做代码签名：显式关掉避免 Tauri 去找证书而失败
+          TAURI_SIGNING_PRIVATE_KEY: ''
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # Tauri NSIS 产物名是 productName（中文），按 0.10 重命名为规范名。
+      # 用通配定位而非写死中文文件名，避免 productName 调整后 CI 静默失败。
+      - name: Rename installer to release naming
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          $found = Get-ChildItem -Path "src-tauri\target\release\bundle\nsis" -Filter "*-setup.exe" |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $found) { throw "未找到 NSIS setup.exe，bundle 可能失败" }
+          Write-Host ("bundle 产物: {0} ({1:N1} MB)" -f $found.Name, ($found.Length / 1MB))
+          Copy-Item -Path $found.FullName -Destination "release\hsr-warp-roll-richkobe-$v-windows-x64-setup.exe" -Force
+
+      # 便携版：Tauri 的 exe 自带前端资源，单文件即可运行，直接压 zip。
+      # 必须用 .NET ZipFile 而非 Compress-Archive：后者写入反斜杠路径分隔符，
+      # Linux/macOS 的 unzip 会解成一堆带反斜杠的平铺文件名（目录结构丢失）。
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $out = "hsr-warp-roll-richkobe-$v-windows-x64-portable.zip"
+          # Cargo package name = hsr-warp-roll（见 src-tauri/Cargo.toml 的 name）
+          $exe = "src-tauri\target\release\hsr-warp-roll.exe"
+          if (-not (Test-Path $exe)) { throw "未找到 $exe，Tauri 可能未产出主程序" }
+          # 便携版里用中文产品名，与安装版开始菜单显示一致
+          $stage = "portable\星穹铁道跃迁模拟器.exe"
+          New-Item -ItemType Directory -Force -Path (Split-Path $stage) | Out-Null
+          Copy-Item -Path $exe -Destination $stage -Force
+          Write-Host ("便携版 exe 体积: {0:N1} MB" -f ((Get-Item $exe).Length / 1MB))
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [System.IO.Compression.ZipFile]::CreateFromDirectory("$PWD\portable", "$PWD\$out", [System.IO.Compression.CompressionLevel]::Optimal, $false)
+          Write-Host "已生成 $out"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            release/hsr-warp-roll-richkobe-${{ steps.ver.outputs.version }}-windows-x64-setup.exe
+            hsr-warp-roll-richkobe-${{ steps.ver.outputs.version }}-windows-x64-portable.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  # 发版搬运：把本 run 的两个发布资产挂到 v<version> tag 的 Release 上。
+  # 为什么在 CI 里搬而不是本地上传：本地到 GitHub 的通道每 ~20MB 重置一次连接，
+  # 上百 MB 的产物续传/分片都极慢且拼出过损坏文件；runner 与 GitHub 同内网，
+  # download-artifact 取本 run 产物零外网传输，上传 Release 资产走内网稳定。
+  publish-assets:
+    # 0.11 两阶段：dev 推送只做构建与测试，不碰 Release；
+    # 合并主干（master）或推 tag 时才执行发版搬运
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: win
+
+      - name: Read version
+        id: ver
+        run: |
+          EXE=$(ls win/release/*-windows-x64-setup.exe | head -1)
+          V=$(echo "$EXE" | sed -E 's/.*richkobe-([0-9]+\.[0-9]+\.[0-9]+)-windows.*/\1/')
+          # 版本提取失败必须立即红，否则会创建出 refs/tags/v 这种游离 tag
+          if [ -z "$V" ] || [ "$V" = "$EXE" ]; then
+            echo "FAIL: 从 exe 文件名提取版本失败，EXE=$EXE"
+            ls -R win | head -20
+            exit 1
+          fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "版本: $V"
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          TAG="v$V"
+          # tag 不存在则创建（指向本 run 的提交）
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$TAG" -f sha="$GITHUB_SHA"
+          fi
+          # Release 不存在则创建（body 从 CHANGELOG 抽当前版本段落；抽不到就拒发，
+          # 避免发出没有更新日志的 Release——CLAUDE.md 0.10 硬要求）
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            awk -v v="## v$V" 'index($0,v)==1{f=1} f&&/^## v/&&index($0,v)!=1{exit} f{print}' CHANGELOG.md > body.md
+            if [ ! -s body.md ]; then
+              echo "FAIL: CHANGELOG.md 里没有 ## v$V 段落，拒绝发版"
+              exit 1
+            fi
+            gh release create "$TAG" --title "v$V — 星穹铁道跃迁模拟器（点名版）" --notes-file body.md
+          fi
+          gh release upload "$TAG" \
+            "win/release/hsr-warp-roll-richkobe-$V-windows-x64-setup.exe" \
+            "win/hsr-warp-roll-richkobe-$V-windows-x64-portable.zip" \
+            --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name'

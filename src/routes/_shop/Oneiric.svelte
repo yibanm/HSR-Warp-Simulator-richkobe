@@ -116,7 +116,7 @@
 				on:change={() => playSfx('click2')}
 			/>
 			<span
-				aria-label="Toggle Topup"
+				aria-label="切换充值"
 				role="button"
 				tabindex="0"
 				on:mousedown={() => {

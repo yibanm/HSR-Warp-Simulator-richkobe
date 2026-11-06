@@ -25,14 +25,19 @@ export const isMobile = writable(false);
 export const viewportWidth = writable(0);
 export const viewportHeight = writable(0);
 
-export const animatedLC = writable(false); // animated LC
-export const liveconeList = writable({}); // animated lc List
 export const assets = writable([]);
 export const probEdit = writable(false);
 
 // Settings
-export const proUser = writable(false);
+// proUser 恒为 true：上游用激活码解锁自定义功能，激活码校验请求作者 gist（离线依赖），已移除。
+export const proUser = writable(true);
+// 音效静音状态。原 phonograph-store 已随留声机（BGM）功能移除，sfx 部分迁移至此。
+export const muted = writable({ sfx: false });
 export const warpAmount = writable('default');
+// 列车动画默认播放（用户 2026-11-05 复裁：「自动跳过跃迁动画」默认=否）；设置里可手动开启跳过。
+// 注意 localStorage 已存过 autoskip 的老用户不受默认值影响（storage-reader 读存储覆盖）。
 export const autoskip = writable({ express: false, art: true });
+// 跨模块请求打开菜单并直达某页（点名卡面「名单管理」按钮用）：值为菜单项名，消费后置空
+export const menuRequest = writable('');
 export const liteMode = writable(false);
 export const isPWA = writable(false);

@@ -13,6 +13,10 @@
 	let colorList = {};
 	const setColor = getContext('setColor');
 	const colorthief = new ColorThief();
+	// 取色结果缓存（角色名→调色板）：fetchAllColor 原本每次 warpList 变化（=每次抽卡后）
+	// 都重新解码全部角色卡池立绘并同步跑 ColorThief canvas 取色，主线程被阻塞 → 抽卡卡顿。
+	// 缓存后同一角色只算一次，切池/抽卡只读缓存。
+	const colorCache = new Map();
 
 	$: fetchAllColor($warpList);
 	$: changeColor(featured);
@@ -23,7 +27,12 @@
 		if (charBanner.length < 1) return;
 		for (let i = 0; i < charBanner.length; i++) {
 			const { featured: charName } = charBanner[i];
-			colorList[charName] = await getColor(charName);
+			// 已取过色的角色直接复用缓存，不再解码/计算
+			if (!colorCache.has(charName)) {
+				const palette = await getColor(charName);
+				if (palette) colorCache.set(charName, palette);
+			}
+			colorList[charName] = colorCache.get(charName);
 		}
 
 		const activeChar = featured || charBanner[0].featured;
@@ -46,6 +55,7 @@
 				// autpic color if no color served
 				const img = new Image();
 				img.crossOrigin = 'anonymous';
+				// 取色专用 img（不入 DOM）：ColorThief 调色板用小图足够，medium 白费内存
 				img.src = $assets[`splash-art/small/${charName}`];
 				img.addEventListener('load', () => {
 					const palette = manualColorPick(charName);
@@ -81,7 +91,7 @@
 		{#if type === 'character-event'}
 			<div class="bg character" class:lite={$liteMode} transition:fade|global>
 				<img
-					src={$assets[`splash-art/small/${featured}`]}
+					src={$assets[`splash-art/medium/${featured}`] || $assets[`splash-art/small/${featured}`]}
 					alt={$t(featured)}
 					crossorigin="anonymous"
 				/>

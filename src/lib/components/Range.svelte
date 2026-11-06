@@ -54,7 +54,7 @@
 	{#if controller}
 		<div class="btn">
 			<button
-				aria-label="Decrease"
+				aria-label="减少"
 				disabled={isNaN(value) || value <= 1}
 				on:touchstart|preventDefault|nonpassive={() => rangeControl('min')}
 				on:mousedown|preventDefault={() => rangeControl('min')}
@@ -84,7 +84,7 @@
 	{#if controller}
 		<div class="btn">
 			<button
-				aria-label="Increase"
+				aria-label="增加"
 				on:touchstart|preventDefault|nonpassive={() => rangeControl('plus')}
 				on:mousedown|preventDefault={() => rangeControl('plus')}
 				on:mouseleave={clearTimers}

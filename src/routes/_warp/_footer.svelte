@@ -1,6 +1,7 @@
 <script>
 	import { getContext, setContext } from 'svelte';
 	import { t } from 'svelte-i18n';
+	import { get } from 'svelte/store';
 	import {
 		activeVersion,
 		activePhase,
@@ -18,6 +19,11 @@
 	import { localBalance } from '$lib/helpers/dataAPI/api-localstorage';
 	import { playSfx } from '$lib/helpers/sounds/audiofx';
 	import WARP, { roll } from '$lib/helpers/gacha/Warp';
+	import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
+	import { drawMembers } from '$lib/helpers/rollcall/draw';
+	import { attachIconUrls } from '$lib/helpers/rollcall/icon';
+	import { refreshRollcall } from '$lib/helpers/dataAPI/api-rollcall';
+	import { pushToast } from '$lib/stores/toast';
 	import Button from './button/_button.svelte';
 	import ButtonWarp from './button/_button-warp.svelte';
 	import ConvertModal from './_convert-modal.svelte';
@@ -70,6 +76,35 @@
 	$: initialWarp($activeVersion, $activePhase);
 
 	const handleGachaAnimation = getContext('handleGachaAnimation');
+	/**
+	 * 点名结果写入跃迁历史。
+	 * 复用原历史的字段结构（banner/type/name/rarity/itemID/time/pity），
+	 * 因此「历史」页无需改渲染逻辑即可列出点名记录；额外带上 chineseChar 与
+	 * iconKey/iconType，让历史页能显示名单里的名字与图标。
+	 * itemID 用 0 占位：点名对象不是游戏物品，没有对应 ID。
+	 */
+	const saveMemberHistory = async (item) => {
+		try {
+			const date = new Date();
+			await HistoryManager.addHistory({
+				time: `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`,
+				banner: 'member',
+				type: 'member',
+				itemID: 0,
+				name: item.name,
+				chineseChar: item.chineseChar,
+				iconKey: item.iconKey,
+				iconType: item.iconType,
+				rarity: item.rarity,
+				// 历史页会渲染 pity 字段，缺失会显示 undefined；点名没有保底概念，固定写 1
+				pity: 1
+			});
+		} catch (e) {
+			// 写历史失败不该打断点名结果展示，仅记录日志
+			console.error('点名记录写入失败：', e);
+		}
+	};
+
 	const doRoll = async (count, bannerToRoll) => {
 		warpProgress = true;
 		playSfx();
@@ -78,6 +113,34 @@
 
 		rollCost = bannerToRoll === 'starter' ? 8 : count;
 		if (!isUnlimited && rollCost > currencyUsed) return (showConverModal = true);
+
+		// 点名卡池不走游戏概率系统，改为从名单里抽人。
+		// 名单为空时不能抽，提示用户去菜单里勾选名单。
+		if (bannerToRoll === 'member') {
+			const members = drawMembers(count);
+			if (!members.length) {
+				// warpProgress 派生自 onWarp，置回 false 即可解除抽卡按钮禁用
+				onWarp.set(false);
+				pushToast({ message: get(t)('rollcall.emptyPool'), type: 'error' });
+				return;
+			}
+			// 图标可能是 IndexedDB 里的 blob，需异步转成可显示的 URL
+			const withIcons = await attachIconUrls(members);
+			for (const item of withIcons) {
+				tmp.push(item);
+				await saveMemberHistory(item);
+			}
+			// 池进度已推进，刷新一次快照，让卡面与管理页的「本轮已点 x/y」同步
+			refreshRollcall();
+
+			warpResult = tmp;
+			handleGachaAnimation(warpResult);
+			if (isUnlimited) return;
+			// undyingQty 恒为 0，updateMilestones 不会增加任何货币
+			updateMilestones();
+			updateBalance(bannerToRoll);
+			return;
+		}
 
 		for (let i = 0; i < count; i++) {
 			const result = await roll(bannerToRoll, WarpInstance, $activeWarp.bannerID);
@@ -146,18 +209,22 @@
 >
 	<div class="row">
 		<div class="info-button">
-			<div class="btn">
-				<Button on:click={() => goto('details')}>
-					{$t('details.view')}
-				</Button>
-			</div>
+			<!-- 点名卡池没有游戏概率详情，隐藏「详情」按钮（详情页依赖 lists.json 里的卡池数据） -->
+			{#if bannerType !== 'member'}
+				<div class="btn">
+					<Button on:click={() => goto('details')}>
+						{$t('details.view')}
+					</Button>
+				</div>
+			{/if}
 			<div class="btn">
 				<Button on:click={() => goto('collection')}>
 					{$t('collection.button')}
 				</Button>
 			</div>
 
-			{#if bannerType !== 'starter'}
+			<!-- 点名不走游戏概率系统，隐藏概率编辑器齿轮 -->
+			{#if bannerType !== 'starter' && bannerType !== 'member'}
 				<div class="btn">
 					<Button type="icon" on:click={editProb}>
 						<i class="hsr-{!$probEdit ? 'cog-bold' : 'check'}"></i>

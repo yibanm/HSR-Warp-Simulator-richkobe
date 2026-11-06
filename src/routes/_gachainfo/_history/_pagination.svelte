@@ -19,13 +19,13 @@
 </script>
 
 <div class="pagination">
-	<button class="prev" aria-label="Previous" disabled={activepage === 1} on:click={previous}>
+	<button class="prev" aria-label="上一页" disabled={activepage === 1} on:click={previous}>
 		<i class="hsr-left-arrow"></i>
 	</button>
 	<span class="active">{activepage}</span>
 	<button
 		class="next"
-		aria-label="Next"
+		aria-label="下一页"
 		disabled={!(dataLength > activepage * itemPerPage)}
 		on:click={next}
 	>

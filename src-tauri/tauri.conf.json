@@ -1,0 +1,60 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "星穹铁道跃迁模拟器",
+  "version": "1.0.1",
+  "identifier": "com.richkobe.hsrwarproll",
+  "build": {
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:5211",
+    "beforeBuildCommand": "npx --yes pnpm@9 run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "星穹铁道跃迁模拟器",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 520,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "category": "Game",
+    "shortDescription": "星穹铁道风格跃迁模拟与名单点名器（完全离线）",
+    "longDescription": "由 richkobe 开发与维护：还原游戏跃迁体验，新增名单点名玩法，无广告与第三方服务，可完全离线使用。游戏素材版权归 miHoYo / HoYoverse 所有。",
+    "copyright": "基于开源项目 HSR Warp Simulator（MIT 许可证）；游戏素材版权归 miHoYo / HoYoverse 所有",
+    "publisher": "richkobe",
+    "homepage": "https://github.com/yibanm/HSR-Warp-Simulator-richkobe",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "languages": [
+          "SimpChinese"
+        ],
+        "installMode": "currentUser",
+        "displayLanguageSelector": false,
+        "headerImage": "nsis-header.bmp",
+        "sidebarImage": "nsis-sidebar.bmp",
+        "installerIcon": "icons/icon.ico",
+        "template": "templates/installer.nsi"
+      }
+    }
+  }
+}

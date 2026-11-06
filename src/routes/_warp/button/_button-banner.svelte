@@ -96,9 +96,17 @@
 			{/if}
 
 			{#if type === 'starter'}
-				<img src={$assets['depature-icon.svg']} alt="Depature" />
+				<img src={$assets['depature-icon.svg']} alt={$t('banner.starter')} />
 			{:else if type === 'regular'}
-				<img src={$assets['stellar-icon.svg']} alt="Stellar" />
+				<img src={$assets['stellar-icon.svg']} alt={$t('banner.regular')} />
+			{:else if type === 'member'}
+				<!-- 中文点名版新增：点名卡池的缩略图。上游这条 if 链没有 member 分支，
+				     图标区会整个空白（实测 figure 内只剩注释占位符），用户在选择栏里
+				     看到一个空框，分不清它是哪个卡池。
+				     用图标字体的人物符号而不是图片素材：点名抽的是「名单里的人」，
+				     语义最贴切；且与名单管理页的池进度条用同一个图标，视觉语言统一；
+				     同时不新增素材文件，不增加产物体积。 -->
+				<i class="hsr-character member-icon"></i>
 			{:else if type === 'character-event'}
 				<img
 					src={$assets[`icon/${featured}`]}
@@ -268,6 +276,19 @@
 		width: 44%;
 		right: 17%;
 		bottom: 0;
+		mask-image: linear-gradient(black 87%, transparent);
+	}
+	/* 点名卡池缩略图：图标字体，定位与配色对齐 .std 的 img（右侧、底部、灰褐色渐隐），
+	   让它在同一排卡池按钮里视觉统一。字号用容器宽度比例，随按钮缩放。 */
+	.member-icon {
+		position: absolute;
+		right: 17%;
+		bottom: 0;
+		width: 44%;
+		font-size: 3.2rem;
+		line-height: 1;
+		color: #a89f8e;
+		text-align: center;
 		mask-image: linear-gradient(black 87%, transparent);
 	}
 	svg.stellar {

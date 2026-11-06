@@ -1,22 +1,27 @@
 <script>
 	import { fade } from 'svelte/transition';
-	import { logs } from '$lib/data/logs.json';
+	// 更新日志独立成页且全面中文化（用户 2026-11-05 要求）：
+	// 数据源改为本仓库维护的 updates.json（中文要点），不再用上游英文 logs.json。
+	import { brief } from '$lib/data/updates.json';
 	import Scrollable from '$lib/components/Scrollable.svelte';
 </script>
 
 <div class="log-update" in:fade={{ duration: 250 }}>
 	<div class="container">
 		<Scrollable dark>
-			{#each [...logs].reverse() as { changes, date }, i (changes)}
+			{#each brief as { ver, date, lines }, i (ver)}
 				<div class="item">
 					<h2>
-						<i class="date">{date}</i>
+						<i class="date">v{ver}</i>
+						{#if date}
+							<span class="log-date">{date}</span>
+						{/if}
 						{#if i === 0}
-							( Latest Update )
+							( 最新 )
 						{/if}
 					</h2>
-					{#each changes as change (change)}
-						<p>{@html change}</p>
+					{#each lines as line (line)}
+						<p>{line}</p>
 					{/each}
 				</div>
 			{/each}
@@ -74,5 +79,12 @@
 		color: rgb(189, 123, 0);
 		font-size: 110%;
 		padding: 0.08rem 0;
+	}
+
+	.log-date {
+		font-weight: normal;
+		font-size: 85%;
+		color: rgba(0, 0, 0, 0.55);
+		padding-left: 0.6rem;
 	}
 </style>

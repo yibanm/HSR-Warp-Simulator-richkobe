@@ -8,9 +8,9 @@ import {
 	activeBanner,
 	activePhase,
 	activeVersion,
-	animatedLC,
 	autoskip,
 	embers,
+	muted,
 	oneiric,
 	probEdit,
 	regReward,
@@ -22,7 +22,6 @@ import {
 	stellarJade,
 	warpAmount
 } from '$lib/stores/app-store';
-import { muted } from '$lib/stores/phonograph-store';
 import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
 import { localConfig, storageLocal } from '$lib/helpers/dataAPI/api-localstorage';
 
@@ -41,7 +40,6 @@ export const storageReset = async ({ keepSetting = false, clearCache = false } =
 	starterRemaining.set(50);
 	showStarterBanner.set(true);
 	regReward.set({ rollcount: 0, isClaimed: false });
-	const customTracks = storageLocal.get('customTracks');
 
 	if (keepSetting) {
 		const config = storageLocal.get('config');
@@ -54,13 +52,15 @@ export const storageReset = async ({ keepSetting = false, clearCache = false } =
 		storageLocal.set('config', config);
 		storageLocal.set('pity', pity);
 		storageLocal.set('balance', balance);
-		storageLocal.set('customTracks', customTracks);
 		storageLocal.set('probabilityRates', probabilityRates);
 		return;
 	}
 
-	localStorage.clear();
-	storageLocal.set('customTracks', customTracks);
+	// 不用 localStorage.clear()：本项目的 localStorage 只有 'WarpSimulator'（游戏数据）
+	// 与 'rollcall'（点名名单）两个键，全清会连带抹掉用户手动导入的班级/小组名单，
+	// 而名单可能几十人、重导成本高。这里定向删游戏数据键，与上方 keepSetting 分支、
+	// 以及原神版的做法保持一致。偏好设置存在 cookie，不受此处影响。
+	localStorage.removeItem('WarpSimulator');
 
 	stellarJade.set(balance.stellarJade);
 	specialPass.set(balance.ticketPass);
@@ -75,9 +75,8 @@ export const storageReset = async ({ keepSetting = false, clearCache = false } =
 	activePhase.set(warpPhase);
 	activeBanner.set(0);
 
-	animatedLC.set(false);
 	warpAmount.set('default');
 	autoskip.set({ express: false, art: true });
-	muted.set({ bgm: false, sfx: false });
+	muted.set({ sfx: false });
 	probEdit.set(false);
 };

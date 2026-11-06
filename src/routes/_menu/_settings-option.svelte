@@ -7,10 +7,8 @@
 	import { cookie } from '$lib/helpers/dataAPI/api-cookie';
 	import { flags, localeName } from '$lib/data/country.json';
 	import { localConfig } from '$lib/helpers/dataAPI/api-localstorage';
-	import { activeBacksound } from '$lib/stores/phonograph-store';
 	import { playSfx, setSfxVolume } from '$lib/helpers/sounds/audiofx';
 	import { userCurrencies } from '$lib/helpers/shop-price';
-	import { setTrackVolume } from '$lib/helpers/sounds/phonograph';
 	import Range from '$lib/components/Range.svelte';
 
 	export let showOption = false;
@@ -35,16 +33,14 @@
 		openOption(optionName);
 	};
 
-	// Range Input
-	const phonoVal = cookie.get('trackVolume') * 100 || 20;
+	// Range Input（仅音效音量；BGM 随留声机功能移除）
 	const sfxVal = cookie.get('sfxVolume') * 100 || 100;
-	let rangeVal = optionName === 'phonoVolume' ? phonoVal : sfxVal;
+	let rangeVal = sfxVal;
 	const setValue = (val) => (rangeVal = val);
 	setContext('setValue', setValue);
 
 	const changeValue = (e) => {
 		const { value } = e.detail;
-		if (optionName === 'phonoVolume') return setTrackVolume(value);
 		setSfxVolume(value);
 	};
 
@@ -56,12 +52,6 @@
 		locale.set(langID);
 		localConfig.set('locale', langID);
 		userCurrencies.init();
-	};
-	const contributeLang = () => {
-		window.open(
-			'https://github.com/AguzzTN54/HSR-Warp-Simulator/tree/master/src/locales',
-			'_blank'
-		);
 	};
 
 	// Clear Storage
@@ -77,23 +67,6 @@
 		playSfx();
 		navigate('allbanner');
 	};
-
-	// feedback
-	const chatToggle = getContext('chatToggle');
-	const feedback = () => {
-		playSfx();
-		chatToggle();
-	};
-
-	// Phonograph
-	const openPhonograph = () => {
-		playSfx();
-		navigate('phonograph');
-	};
-
-	const dontShowAlbum = ['more-ost', 'custom-musics'];
-	$: dontShow = dontShowAlbum.includes($activeBacksound.album);
-	$: activeAlbum = dontShow ? '' : ' - ' + $t(`phonograph.${$activeBacksound.album}`);
 </script>
 
 <div class="setting-item" class:sub>
@@ -121,10 +94,6 @@
 							<img src="data:image/png;base64,{flags[key]}" alt="flag {key}" class="flag" />
 						</button>
 					{/each}
-
-					<button on:click={contributeLang}>
-						<span> Contribute </span>
-					</button>
 				</div>
 			{/if}
 
@@ -134,32 +103,11 @@
 				{$t('menu.clearNow')} <i class="hsr-trash"></i>
 			</button>
 
-			<!-- Choose Backsound -->
-		{:else if optionName === 'backsound'}
-			<button
-				class="selected-option"
-				style="text-align: left; padding-left: 5%"
-				on:click={openPhonograph}
-			>
-				<!-- svelte-ignore a11y-distracting-elements -->
-				<marquee style="width: 75%;">
-					{$activeBacksound.title}{activeAlbum}
-				</marquee>
-				<i class="hsr-music"></i>
-			</button>
-
 			<!-- Switch Banner -->
 		{:else if optionName === 'switchbanner'}
 			<button class="selected-option" on:click={switchBanner}>
 				{$activeVersion === '1000000.0' ? 'Pro' : $activeVersion} - {$activePhase}
 				<i class="hsr-caret-down"></i>
-			</button>
-
-			<!-- Feedback -->
-		{:else if optionName === 'feedback'}
-			<button class="selected-option" on:click={feedback}>
-				{$t('menu.feedback')}
-				<i class="hsr-bug"></i>
 			</button>
 
 			<!-- Number of Warps -->

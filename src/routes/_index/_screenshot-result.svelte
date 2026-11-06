@@ -45,7 +45,7 @@
 
 	const saveHandler = () => {
 		playSfx('click2');
-		filesaver.saveAs(blob, `HSR.WishSimulator.App - ${new Date().toLocaleString()}.png`);
+		filesaver.saveAs(blob, `星穹铁道点名版 - ${new Date().toLocaleString()}.png`);
 		addFunds();
 	};
 
@@ -63,12 +63,6 @@
 		addFunds();
 	};
 
-	// const pinterestHandle = () => {
-	// 	const url = `https://www.pinterest.com/pin/create/button?url=${shareLink}&description=${shareText}&media=${screenshotURL}`;
-	// 	window.open(url, '_blank');
-	// 	addFunds();
-	// };
-
 	const webShareHandle = async () => {
 		try {
 			playSfx('click2');
@@ -78,7 +72,7 @@
 				url: shareLink
 			};
 
-			const files = new File([blob], `HSR.WishSimulator.App - ${new Date().toLocaleString()}.png`, {
+			const files = new File([blob], `星穹铁道点名版 - ${new Date().toLocaleString()}.png`, {
 				type: blob.type,
 				lastModified: new Date().getTime()
 			});
@@ -105,7 +99,7 @@
 		</picture>
 
 		{#if shareURL}
-			<button class="shareableLink" title="Copy Link" on:click={copyHandle}>
+			<button class="shareableLink" title="复制链接" on:click={copyHandle}>
 				<span class="link"> {shareLink} </span>
 				<span class="icon">
 					<i class="hsr-clone"></i>
@@ -115,20 +109,19 @@
 
 		<div class="social-button" transition:fade>
 			{#if shareURL}
-				<button on:click={facebookHandle} aria-label="Share on Facebook">
+				<button on:click={facebookHandle} aria-label="分享到 Facebook">
 					<i class="hsr-facebook"></i>
 				</button>
-				<button on:click={twitterHandle} aria-label="Share on Twitter">
+				<button on:click={twitterHandle} aria-label="分享到 Twitter">
 					<i class="hsr-twitter"></i>
 				</button>
-				<!-- <button on:click={pinterestHandle}> <i class="hsr-pinterest" ></i> </button> -->
 				{#if navigator.share}
-					<button on:click={webShareHandle} aria-label="Share via Web Share">
+					<button on:click={webShareHandle} aria-label="系统分享">
 						<i class="hsr-dot-3"></i>
 					</button>
 				{/if}
 			{/if}
-			<button on:click={saveHandler} aria-label="Save Screenshot">
+			<button on:click={saveHandler} aria-label="保存截图">
 				<i class="hsr-save"></i>
 			</button>
 		</div>
@@ -144,7 +137,7 @@
 	</div>
 
 	{#if showToast}
-		<div class="toast" in:fly={{ y: 10 }} out:fade>Copied to Clipboard</div>
+		<div class="toast" in:fly={{ y: 10 }} out:fade>已复制到剪贴板</div>
 	{/if}
 </div>
 

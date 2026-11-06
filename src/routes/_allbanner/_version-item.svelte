@@ -55,30 +55,33 @@
 		<div class="banner-pic">
 			<div class="wrapper" class:dual={bannerID.length > 1}>
 				{#if bannerID.length > 1}
-					{@const { bannerName, runNumber } = charData[0]}
-					{@const img = $assets[`banner/${bannerName}-${runNumber}`]}
+					{@const { featured: featured0 } = charData[0]}
+					{@const art0 =
+						$assets[`splash-art/small/${featured0}`] ||
+						$assets[`lc/small/${featured0}`] ||
+						$assets[`closeup/${featured0}`]}
 					<div class="rateup4">
-						<img
-							use:lazyLoad={img || $assets[`banner/${version.replace('.', '-')}_${phase}`]}
-							alt={$t(`banner.${bannerName}`)}
-							crossorigin="anonymous"
-						/>
+						<!-- 中文点名版：上游此处用国际服官方海报图，英文卡池名与说明文字
+						     直接烧在图里无法汉化，且多为 300×169 低分辨率拉伸发糊。
+						     改用官方无字素材：角色走 splash-art/small（640w 官方档），
+						     光锥走 lc/small（上游对光锥 banner 此处本就取不到图、缩略图空白，
+						     顺带补上）；卡池名由页面文字层以中文呈现 -->
+						<img use:lazyLoad={art0} alt={$t(featured0)} crossorigin="anonymous" />
 					</div>
 				{/if}
 
-				{#each charData as { bannerName, runNumber, featured }, i (charData[i])}
-					{@const img = $assets[`banner/${bannerName || featured}-${runNumber}`]}
-					<picture class:bg={!img}>
-						<img
-							use:lazyLoad={img || $assets[`closeup/${featured}`]}
-							alt={$t(`banner.${bannerName}`)}
-							crossorigin="anonymous"
-						/>
+				{#each charData as { bannerName, featured }, i (charData[i])}
+					{@const art =
+						$assets[`splash-art/small/${featured}`] ||
+						$assets[`lc/small/${featured}`] ||
+						$assets[`closeup/${featured}`]}
+					<picture class="bg">
+						<img use:lazyLoad={art} alt={$t(`banner.${bannerName}`)} crossorigin="anonymous" />
 					</picture>
 				{/each}
 			</div>
 			{#if pro}
-				<span class="phase"> STC </span>
+				<span class="phase"> {$t('banner.stc')} </span>
 			{:else}
 				<span class="phase"> {$t('phase')} {phase} </span>
 			{/if}
@@ -86,7 +89,8 @@
 			{#if locked}
 				<div class="lock">
 					<span>
-						<i class="hsr-lock" style="transform:translateY(15%); display:inline-block"></i> Locked
+						<i class="hsr-lock" style="transform:translateY(15%); display:inline-block"></i>
+						{$t('banner.locked')}
 					</span>
 				</div>
 			{/if}
@@ -141,6 +145,10 @@
 	}
 	picture.bg img {
 		height: 100%;
+		/* 立绘是竖图（376×509），容器是 16/9 横格：
+		   不裁切的话竖图会被压扁。cover + 顶部对齐保住人物头部 */
+		object-fit: cover;
+		object-position: top center;
 	}
 
 	picture img {
@@ -177,9 +185,10 @@
 
 	.rateup4 img {
 		position: absolute;
-		left: -2.2%;
-		bottom: -15%;
-		height: 260%;
+		left: 0;
+		top: 0;
+		width: 100%;
+		height: auto;
 	}
 
 	.banner-pic {

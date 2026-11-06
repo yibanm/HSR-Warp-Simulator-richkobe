@@ -4,7 +4,6 @@
 	import { activeWarp } from '$lib/stores/app-store';
 
 	import Scrollable from '$lib/components/Scrollable.svelte';
-	import Iklan from '$lib/components/Iklan.svelte';
 	import Table from './_table.svelte';
 	import Report from './_report.svelte';
 	import Filter from './_filter.svelte';
@@ -70,8 +69,6 @@
 
 	<Legends banner={type} />
 	<Pagination dataLength={filteredDataLength} {itemPerPage} {activepage} />
-
-	<Iklan type="banner" />
 </div>
 
 <style>

@@ -30,7 +30,7 @@
 		</g>
 	</svg>
 	<div class="corner-text">
-		<span>MADE BY AGUZZTN </span>
+		<span>星穹铁道 · 点名版 </span>
 	</div>
 </div>
 
@@ -102,7 +102,7 @@
 		left: 91.4%;
 		z-index: +2;
 		transform: rotate(270deg);
-		font-family: var(--hsr-neue);
+		font-family: var(--hsr-os-font);
 		opacity: 0.4;
 		font-size: calc(0.008 * var(--bw));
 		letter-spacing: calc(0.003 * var(--bw));

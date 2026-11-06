@@ -3,24 +3,14 @@
 	import { fade, fly } from 'svelte/transition';
 	import { locale, t } from 'svelte-i18n';
 
-	import { warpAmount, autoskip, liteMode, animatedLC } from '$lib/stores/app-store';
-	import { muted } from '$lib/stores/phonograph-store';
+	import { warpAmount, autoskip, liteMode, muted } from '$lib/stores/app-store';
 	import { localConfig } from '$lib/helpers/dataAPI/api-localstorage';
-	import { initTrack, pauseTrack } from '$lib/helpers/sounds/phonograph';
 	import { check as expressChecker } from '$lib/helpers/express-loader';
 
 	import Scrollable from '$lib/components/Scrollable.svelte';
 	import OptionsItem from './_settings-option.svelte';
 
 	export let activeOption;
-
-	// Animated Light Cone
-	const handleLivecone = ({ detail }) => {
-		const { selected } = detail;
-		const isLivecone = selected === 'yes';
-		animatedLC.set(isLivecone);
-		localConfig.set('livecone', isLivecone);
-	};
 
 	// Lite Mode
 	const handleLiteMode = ({ detail }) => {
@@ -58,24 +48,16 @@
 		localConfig.set('autoskip', { express: true, art: isAutoSkip });
 	};
 
-	// Sound & Volume
+	// 音效静音（BGM 随留声机功能一并移除，此处只管音效）
 	const handleSound = ({ detail }) => {
-		const { selected, optionName } = detail;
+		const { selected } = detail;
+		const isMuted = selected === 'yes';
 
-		const isBGM = optionName === 'muteBGM';
-		// stop bgm before saving config
-		if (selected === 'yes' && isBGM) pauseTrack();
-
-		// saving config
-		const key = isBGM ? 'bgm' : 'sfx';
 		muted.update((v) => {
-			v[key] = selected === 'yes';
+			v.sfx = isMuted;
 			return v;
 		});
-		localConfig.set('mutedSounds', $muted);
-
-		// Play audio after saving config
-		if (selected !== 'yes' && isBGM) initTrack();
+		localConfig.set('mutedSounds', { sfx: isMuted });
 	};
 </script>
 
@@ -105,7 +87,6 @@
 		</OptionsItem>
 
 		<OptionsItem optionName="reset">{$t('menu.clearStorage')}</OptionsItem>
-		<OptionsItem optionName="feedback">{$t('menu.giveComment')}</OptionsItem>
 
 		<!-- Visual -->
 		<h2>{$t('menu.visual')}</h2>
@@ -140,18 +121,6 @@
 			{$t('menu.litemode')}
 		</OptionsItem>
 
-		{#if !$liteMode}
-			<OptionsItem
-				sub
-				showOption={activeOption === 'livecone'}
-				optionName="livecone"
-				activeIndicator={$animatedLC}
-				on:select={handleLivecone}
-			>
-				{$t('menu.livecone')}
-			</OptionsItem>
-		{/if}
-
 		<!-- AUDIO -->
 		<h2>{$t('menu.sound')}</h2>
 		<OptionsItem
@@ -166,28 +135,6 @@
 			<div transition:fly|local={{ y: -10 }}>
 				<OptionsItem sub optionName="sfxVolume" mode="slider">
 					{$t('menu.sfxVolume')}
-				</OptionsItem>
-			</div>
-		{/if}
-
-		<OptionsItem
-			showOption={activeOption === 'muteBGM'}
-			optionName="muteBGM"
-			activeIndicator={$muted.bgm}
-			on:select={handleSound}
-		>
-			{$t('menu.mutedBGM')}
-		</OptionsItem>
-
-		{#if !$muted.bgm}
-			<div transition:fly|local={{ y: -10 }}>
-				<OptionsItem sub optionName="backsound">
-					{$t('phonograph.choosebgm')}
-				</OptionsItem>
-			</div>
-			<div transition:fly|local={{ y: -10 }}>
-				<OptionsItem sub optionName="phonoVolume" mode="slider">
-					{$t('menu.musicVolume')}
 				</OptionsItem>
 			</div>
 		{/if}

@@ -63,6 +63,10 @@
 		transform: scale(0.9);
 	}
 
+	/* 横排导航的图标盒宽度/间距由 _navbar.svelte 的 scope 选择器统一管
+	   （.nav.horizontal :global(...)）。本组件不再写横排规则：horizontal 类在
+	   _navbar 根 div 上而非 aside 上，此前 aside.horizontal 系选择器全不命中 */
+
 	.icon {
 		font-size: 180%;
 		width: 100%;

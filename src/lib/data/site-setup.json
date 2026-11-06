@@ -1,6 +1,6 @@
 {
-	"HOST": "https://hsr.wishsimulator.app",
-	"APP_TITLE": "\"Honkai: Star Rail\" Warp Simulator",
-	"DESCRIPTION": "Just a Realistic Gacha Simulator for Honkai: Star Rail. Let's Simulate your luck indefinitely through a web-based Application!",
-	"KEYWORDS": "Honkai simulator, Gacha simulator, HSR Gacha, free gacha, free wish, stellar warp, star rail banner, free warp, Honkai Wish Simulator, HSR Wish Simulator, Wish Sim, Star Rail Warp Simulator"
+	"HOST": "https://github.com/yibanm/HSR-Warp-Simulator-richkobe",
+	"APP_TITLE": "\"崩坏：星穹铁道\" 跃迁模拟器（点名版）",
+	"DESCRIPTION": "崩坏：星穹铁道抽卡模拟器中文点名版：完全本地运行、无需联网、不收集任何个人信息，内置名单点名抽卡功能。",
+	"KEYWORDS": "崩坏星穹铁道, 星穹铁道, 抽卡模拟器, 跃迁模拟器, 点名抽卡, HSR模拟器, 星铁抽卡, 免费抽卡, 星琼, 跃迁"
 }

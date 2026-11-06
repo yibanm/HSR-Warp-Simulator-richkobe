@@ -9,7 +9,6 @@
 		showStarterBanner
 	} from '$lib/stores/app-store';
 	import { playSfx } from '$lib/helpers/sounds/audiofx';
-	import { pauseTrack, resumeTrack } from '$lib/helpers/sounds/phonograph';
 	import { importLocalConfig, setBannerVersionAndPhase } from '$lib/helpers/dataAPI/storage-reader';
 	import { browserState } from '$lib/helpers/page-navigation';
 	import { handleShowStarter, initializeBanner } from '$lib/helpers/banner-loader';
@@ -21,17 +20,15 @@
 	import Banners from './_warp/index.svelte';
 	import Menu from './_menu/index.svelte';
 
-	let AllBanner, Collection, Feedback, Shop, GachaInfo, Phonograph, ObtainedItem, ModalConvert;
+	let AllBanner, Collection, Shop, GachaInfo, ObtainedItem, ModalConvert;
 	const asyncLoadComponent = async () => {
 		ObtainedItem = (await import('$lib/components/ObtainedItem.svelte')).default;
 		ModalConvert = (await import('$lib/components/ModalConvert.svelte')).default;
 
 		AllBanner = (await import('./_allbanner/index.svelte')).default;
 		Collection = (await import('./_collection/index.svelte')).default;
-		Feedback = (await import('./_feedback/index.svelte')).default;
 		Shop = (await import('./_shop/index.svelte')).default;
 		GachaInfo = (await import('./_gachainfo/index.svelte')).default;
-		Phonograph = (await import('./_phonograph/index.svelte')).default;
 	};
 
 	let status;
@@ -64,16 +61,15 @@
 	const onWarp = writable(false);
 	setContext('onWarp', onWarp);
 
-	const handleTrack = () => {
-		if (welcomeScreen) return;
-		if ($onWarp) return;
-
-		const mode = document.visibilityState;
-		if (mode === 'visible') return resumeTrack();
-		pauseTrack({ stop: false });
-	};
-
 	onMount(() => {
+		// 勾过「不再提示」后启动不弹欢迎窗。读取失败（隐私模式等）按默认弹出。
+		// 放 onMount 而非模块顶层：本路由 prerender，顶层碰 localStorage 会在构建期报错
+		try {
+			if (localStorage.getItem('hsrws-hide-welcome') === '1') welcomeScreen = false;
+		} catch (e) {
+			/* 读不到就照常弹窗 */
+		}
+
 		setBannerVersionAndPhase();
 		importLocalConfig();
 
@@ -86,15 +82,11 @@
 		// Detect Currencies
 		userCurrencies.init();
 
-		// Play track
-		handleTrack();
-
 		window.addEventListener('popstate', (e) => {
 			if (e.state?.page) return;
 			if (pageActive === 'index') return;
 			navigate('index');
 		});
-		document.addEventListener('visibilitychange', handleTrack);
 	});
 
 	// Convert Modal
@@ -120,20 +112,10 @@
 	// Express Loader
 	const readyToPull = writable(true);
 	setContext('readyToPull', readyToPull);
-
-	// Feedback
-	let chatLoaded = false; // initial load
-	let showChat = false; // toggle hide-show
-	const chatToggle = () => {
-		chatLoaded = true;
-		showChat = !showChat;
-		playSfx();
-	};
-	setContext('chatToggle', chatToggle);
 </script>
 
 {#if status === 'error'}
-	error bos
+	卡池数据加载失败，请刷新页面重试
 {/if}
 
 <!-- Warp Section -->
@@ -156,17 +138,9 @@
 	<!-- Wrap Details -->
 {:else if pageActive === 'details'}
 	<svelte:component this={GachaInfo} />
-
-	<!-- Phonograph -->
-{:else if pageActive === 'phonograph'}
-	<svelte:component this={Phonograph} />
 {/if}
 
 <!-- Utils -->
-{#if chatLoaded}
-	<svelte:component this={Feedback} show={showChat} />
-{/if}
-
 {#if showObtained}
 	<svelte:component this={ObtainedItem} {...obtainedData} />
 {/if}

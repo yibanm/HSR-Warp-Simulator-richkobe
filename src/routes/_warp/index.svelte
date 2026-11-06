@@ -13,7 +13,6 @@
 		showStarterBanner
 	} from '$lib/stores/app-store';
 	import { rollCounter } from '$lib/helpers/dataAPI/api-localstorage';
-	import { pauseTrack, resumeTrack } from '$lib/helpers/sounds/phonograph';
 	import { playSfx } from '$lib/helpers/sounds/audiofx.js';
 
 	import AdditionalReward from './additional-reward/AdditionalReward.svelte';
@@ -67,18 +66,21 @@
 	};
 	setContext('showSplashArt', showSplashArt);
 
-	// Prevent phonograph playing when warping
+	// 抽卡进行中状态：供 footer 禁用抽卡按钮，避免动画期间重复触发
 	const onWarp = getContext('onWarp');
 	const closeResult = () => {
+		// 三个覆盖层状态必须一起清：X 按钮渲染在 WarpResult 内部，若只清 showWarpResult
+		// 而 showAstralExpress 仍为 true，warp-container 的 .show 覆盖层会留在屏幕上变成
+		// 空壳（吞掉全部点击、无任何按钮可点）——用户表现为「右上角叉关不掉」（2026-11-05 实测）
 		showWarpResult = false;
+		showAstralExpress = false;
+		skipSplashart = false;
 		onWarp.set(false);
-		resumeTrack();
 	};
 	setContext('closeResult', closeResult);
 
 	const handleGachaAnimation = (result, source = 'warp') => {
 		onWarp.set(true);
-		pauseTrack({ stop: false });
 
 		warpResult = result;
 		const { express: skipExpress, art: skipArt } = $autoskip;

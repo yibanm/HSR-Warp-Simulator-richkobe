@@ -8,6 +8,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import LightCones from '$lib/components/LightCones.svelte';
 	import Path from '$lib/components/Path.svelte';
+	import { memberDisplayName } from '$lib/helpers/rollcall/display';
 
 	export let isNew = false;
 	export let rarity = 3;
@@ -20,6 +21,11 @@
 	export let undyingType = 'embers';
 	export let undyingQty = 0;
 	export let eidolon = false;
+
+	// 点名结果专用（中文点名版）：名单里的名字与图标
+	export let chineseChar = '';
+	export let iconUrl = null;
+	export let iconType = null;
 
 	let flip = rarity === 5;
 	let loaded = false;
@@ -45,7 +51,29 @@
 		{#if isNew}
 			<div class="new">{$t('new')}</div>
 		{/if}
-		{#if type === 'lightcone'}
+		{#if type === 'member'}
+			<!-- 点名结果：不是游戏物品，没有立绘/命途/属性图标，
+			     显示名单图标，自定义名单无图标时退化为姓名首字 -->
+			<div class="content member">
+				<div class="member-thumb">
+					{#if iconUrl}
+						<img src={iconUrl} alt={chineseChar || itemName} />
+					{:else}
+						<span class="initial">{(chineseChar || itemName || '').slice(0, 1)}</span>
+					{/if}
+				</div>
+				<div class="member-detail">
+					<div class="member-name">
+						{memberDisplayName({ name: itemName, chineseChar, iconType }, $t)}
+					</div>
+					<div class="rarity">
+						{#each Array(parseInt(rarity)) as _, i (i)}
+							<i class="hsr-star"></i>
+						{/each}
+					</div>
+				</div>
+			</div>
+		{:else if type === 'lightcone'}
 			<div class="content">
 				<div class="col lc-left">
 					<div class="path">
@@ -57,7 +85,7 @@
 						{/each}
 					</div>
 					<div class="caption">
-						<span>LIGHTCONE</span>
+						<span>{$t('lightcone')}</span>
 					</div>
 				</div>
 				<div class="col lc-right">
@@ -67,7 +95,7 @@
 				</div>
 			</div>
 		{:else}
-			<span> TICKET </span>
+			<span> {$t('character')} </span>
 
 			{#if undyingQty > 0}
 				<div class="bonus" in:fade={{ delay: 700, duration: 200 }}>
@@ -104,7 +132,7 @@
 				{/if}
 				<picture>
 					<img
-						src={$assets[`splash-art/${$viewportWidth > 840 ? 'medium' : 'small'}/${itemName}`]}
+						src={$assets[`splash-art/${$viewportWidth > 1280 ? 'large' : $viewportWidth > 840 ? 'medium' : 'small'}/${itemName}`]}
 						alt={$t(itemName)}
 						style={positionToStyle(cardOffset)}
 						crossorigin="anonymous"
@@ -443,6 +471,76 @@
 	}
 	.star4.character span::after {
 		border: calc(0.0002 * var(--item-width)) solid #604187;
+	}
+
+	/* 点名结果（中文点名版新增） */
+	.item .content.member {
+		background-image: linear-gradient(rgba(0, 0, 0, 0.55), #3a3f5c);
+		display: flex;
+		align-items: center;
+		gap: calc(0.012 * var(--item-width));
+		padding: calc(0.01 * var(--item-width));
+	}
+
+	.member-thumb {
+		flex-shrink: 0;
+		width: calc(0.075 * var(--item-width));
+		aspect-ratio: 1/1;
+		border-radius: 0.4rem;
+		overflow: hidden;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background-image: linear-gradient(#3e3b66, #8858cc 80%);
+		border: calc(0.002 * var(--item-width)) solid rgba(255, 255, 255, 0.4);
+		position: relative;
+		z-index: +2;
+	}
+
+	.star5 .member-thumb {
+		background-image: linear-gradient(#7a514f, #d0a050 80%);
+	}
+	.star3 .member-thumb {
+		background-image: linear-gradient(#2f4a63, #5f9dc9 80%);
+	}
+
+	.member-thumb img {
+		position: static;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transform: none;
+	}
+
+	.member-thumb .initial {
+		position: static;
+		transform: none;
+		font-size: calc(0.035 * var(--item-width));
+		color: #fff;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.member-detail {
+		min-width: 0;
+		position: relative;
+		z-index: +2;
+	}
+
+	.member-detail .member-name {
+		color: #fff;
+		font-size: calc(0.016 * var(--item-width));
+		font-weight: 600;
+		line-height: 120%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-shadow: 0 0 0.4rem rgba(0, 0, 0, 0.7);
+	}
+
+	.member-detail .rarity i {
+		font-size: calc(0.011 * var(--item-width));
+		color: #ffe9a8;
 	}
 
 	/* Bonus Milestone */

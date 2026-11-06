@@ -12,7 +12,6 @@
 	import ExchangeModal from './_exchange-modal.svelte';
 	import Oneiric from './Oneiric.svelte';
 	import ExchangeItem from './ExchangeItem.svelte';
-	import Donate from './Donate.svelte';
 
 	const random = (min, max) => {
 		min = Math.ceil(min);
@@ -65,7 +64,7 @@
 	<img class="bg" src={$assets[`bg${random(1, 14)}.webp`]} alt="background" />
 
 	<div class="container" in:fade={{ duration: 500 }}>
-		<Header h1="Store" h2={$t(`shop.${activeShop}`)} icon="shop" relative>
+		<Header h1={$t('shop.heading')} h2={$t(`shop.${activeShop}`)} icon="shop" relative>
 			{#if activeShop === 'oneiricPouch'}
 				<MyFund type="oneiric">{$oneiric}</MyFund>
 			{/if}
@@ -105,10 +104,6 @@
 
 				{#if activeShop === 'stellarTrade'}
 					<ExchangeItem item="stellarJade" />
-				{/if}
-
-				{#if activeShop === 'donate'}
-					<Donate />
 				{/if}
 			</div>
 		</div>

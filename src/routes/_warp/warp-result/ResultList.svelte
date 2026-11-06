@@ -56,7 +56,7 @@
 						class="{key} row"
 						in:customfly|global={{ x: layer === 1 ? 200 : -200, duration: 600 }}
 					>
-						{#each groupedList[key] as { name, rarity, combat_type, type, path, gachaCardOffset, isNew, eidolon, undyingType, undyingQty }, i (groupedList[key][i])}
+						{#each groupedList[key] as { name, rarity, combat_type, type, path, gachaCardOffset, isNew, eidolon, undyingType, undyingQty, chineseChar, iconUrl, iconType }, i (groupedList[key][i])}
 							<div class=" item item{i}">
 								<ResultListItem
 									{rarity}
@@ -66,6 +66,9 @@
 									{isNew}
 									{undyingType}
 									{undyingQty}
+									{chineseChar}
+									{iconUrl}
+									{iconType}
 									itemName={name}
 									combatType={combat_type}
 									cardOffset={gachaCardOffset}
@@ -145,7 +148,10 @@
 
 	.list {
 		width: 80%;
-		max-width: 140vh;
+		/* scale(1.35) 在 max-width 之后生效：高窗口下 140vh×1.35 会超出视口宽，
+		   边缘卡片人名被挤出窗口（2026-11-05 用户 2300px 宽窗口截图实锤）。
+		   74vw = 100vw ÷ 1.35，保证放大后整行不超视口 */
+		max-width: min(140vh, 74vw);
 		transform: rotate(-13deg) scale(1.35) translateY(-4.5%);
 	}
 

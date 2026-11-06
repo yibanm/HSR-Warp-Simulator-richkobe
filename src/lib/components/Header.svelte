@@ -16,6 +16,8 @@
 			<h1>{h1}</h1>
 			<h2>{h2}</h2>
 		</div>
+		<!-- 标题行附加区（左上角按钮等），原神版历史按钮同位置 -->
+		<slot name="title-extra" />
 	</div>
 
 	<div class="row">

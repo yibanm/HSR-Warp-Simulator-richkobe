@@ -3,7 +3,6 @@
 	import { page } from '$app/stores';
 	import { onMount, setContext } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { writable } from 'svelte/store';
 	import { isLoading, locale } from 'svelte-i18n';
 	import { dev } from '$app/environment';
 	import './styles.css';
@@ -19,22 +18,22 @@
 	import { IDBUpdater } from '$lib/helpers/migrator/idbUpdater';
 	import { wakeLock } from '$lib/helpers/wakelock';
 	import { mobileDetect } from '$lib/helpers/mobile-detect';
-	import { loadTracks } from '$lib/helpers/sounds/media-session';
 	import { mountLocale } from '$lib/helpers/i18n';
+	import { toast, closeToast } from '$lib/stores/toast';
+	import { initRollcall } from '$lib/helpers/dataAPI/api-rollcall';
 
-	import Iklan from '$lib/components/Iklan.svelte';
 	import InitialLoader from './_index/InitialLoader.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 
 	let isLoaded = false;
-	const showAd = writable(false);
 	setContext('loaded', () => (isLoaded = true));
-	setContext('showAd', showAd);
+	// 全局轻提示：Toast.svelte 靠 getContext('closeToast') 关闭，在此提供
+	setContext('closeToast', closeToast);
 
 	let innerHeight;
 	let innerWidth;
 	$: viewportWidth.set(innerWidth);
 	$: viewportHeight.set(innerHeight);
-	$: previewScreen = $page.url.pathname.includes('screen');
 
 	let font = '';
 	$: {
@@ -44,7 +43,7 @@
 	}
 
 	const redirectIfNotValidPath = () => {
-		const allowedPath = ['screen', 'feedback', 'privacy-policy'];
+		const allowedPath = ['screen', 'privacy-policy'];
 		const { pathname } = $page.url;
 		const pathNow = pathname.split('/')[1];
 		if (!pathNow || allowedPath.includes(pathNow)) return;
@@ -73,13 +72,24 @@
 			if ($isMobile) setMobileMode();
 		});
 
-		loadTracks(); // Load Phonograph Tracks
 		wakeLock(); // Prevent screen off while open the app
 		await IDBUpdater(); // update site data to the newer version
 
+		// 点名名单：在应用级初始化（读取存储、清理指向已删名单的勾选与池进度）。
+		// 必须放这里而不是名单管理页——若只在管理页初始化，卡面与抽卡入口首次渲染时
+		// 读不到勾选状态，会一直显示「未勾选名单」。
+		initRollcall();
+
 		// Service Worker for Faster Load
-		if ('serviceWorker' in navigator && !dev) {
+		// 壳环境（Tauri/Electron 注入 __TAURI__/electronAPI）不注册 SW：自定义协议下
+		// SW 拦截会让 JS chunk 加载失败 → hydration 不完成 → 永久卡预渲染骨架
+		// （用户 2026-11-05 Tauri 壳内卡「正在连接」实测）
+		const inShell = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__ || !!window.electronAPI);
+		if ('serviceWorker' in navigator && !dev && !inShell) {
 			navigator.serviceWorker.register('/sw.js'); // /dev-sw.js?dev-sw
+		} else if (inShell && 'serviceWorker' in navigator) {
+			// 壳环境清掉历史版本可能注册过的 SW，否则旧 SW 继续拦截请求
+			navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister()));
 		}
 		// prevent Righ click (hold on android) on production mode
 		if (!dev) document.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -143,17 +153,6 @@
 		type="font/woff2"
 		crossorigin
 	/>
-	<link
-		rel="preload"
-		href="/fonts/optimized_zh_web.woff2"
-		as="font"
-		type="font/woff2"
-		crossorigin
-	/>
-
-	{#if isLoaded && $showAd}
-		<Iklan head />
-	{/if}
 </svelte:head>
 
 <main
@@ -171,8 +170,8 @@
 		<slot />
 	{/if}
 
-	{#if !previewScreen}
-		<span class="uid"> HSR.WishSimulator.App </span>
+	{#if $toast}
+		<Toast autoclose={false}>{$toast.message}</Toast>
 	{/if}
 </main>
 
@@ -233,18 +232,5 @@
 
 	:global(audio) {
 		visibility: hidden;
-	}
-
-	.uid {
-		display: block;
-		position: fixed;
-		bottom: 0px;
-		left: 5%;
-		padding: 0.2%;
-		z-index: 9999;
-		color: #ddd;
-		text-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.7);
-		-webkit-text-stroke: 0.01rem #000;
-		pointer-events: none;
 	}
 </style>

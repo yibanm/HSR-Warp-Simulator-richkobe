@@ -10,10 +10,13 @@
 	import Navbar from './_navbar.svelte';
 	import UpdateLog from './UpdateLog.svelte';
 	import Settings from './Settings.svelte';
-	import ProUser from './ProUser.svelte';
+	import Rollcall from './Rollcall.svelte';
+	import About from './About.svelte';
 
 	const closeMenu = getContext('toggleMenu');
-	let activeMenu = 'settings';
+	// 打开菜单时的直达页（名单管理等跨模块入口），默认设置页
+	export let initialMenu = 'settings';
+	let activeMenu = initialMenu;
 	const selectMenu = (menu) => (activeMenu = menu);
 	setContext('selectMenu', selectMenu);
 
@@ -29,10 +32,11 @@
 	transition:fade={{ duration: 200 }}
 	on:mousedown={() => openOption('')}
 >
+	<!-- 横排导航独立成行（脱离 Header 的 absolute 定位上下文，避免裁切/偏移） -->
+	{#if !$isMobileLandscape}
+		<Navbar horizontal {activeMenu} />
+	{/if}
 	<Header h1={$t('menu.heading')} h2={$t(`menu.${activeMenu}`)} icon="menu" relative>
-		{#if !$isMobileLandscape}
-			<Navbar horizontal {activeMenu} />
-		{/if}
 		<div class="close" class:right={$isMobileLandscape}>
 			<ButtonIcon on:click={closeMenu} />
 		</div>
@@ -51,8 +55,12 @@
 			<UpdateLog />
 		{/if}
 
-		{#if activeMenu === 'prouser'}
-			<ProUser />
+		{#if activeMenu === 'rollcall'}
+			<Rollcall />
+		{/if}
+
+		{#if activeMenu === 'about'}
+			<About />
 		{/if}
 	</div>
 </section>
@@ -67,12 +75,16 @@
 		z-index: 100;
 		background-color: rgba(0, 0, 0, 0.2);
 		backdrop-filter: blur(15px);
+		display: flex;
+		flex-direction: column;
 	}
 
 	.container {
 		padding: 1rem 5%;
 		width: 100%;
-		height: 88%;
+		/* 顶部新增横排导航行后，88% 固定高会溢出；改弹性填充剩余高度 */
+		flex: 1;
+		min-height: 0;
 		display: flex;
 	}
 	.right {

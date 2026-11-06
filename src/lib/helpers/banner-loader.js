@@ -53,6 +53,19 @@ export const initializeBanner = async (version, phase) => {
 		});
 
 		list.push({ ...regularData, ...identifyBanner(regularData.bannerID) });
+
+		// 中文点名版：点名卡池，放在列表末尾与其它卡池同级。
+		// 背景复用常驻跃迁立绘（见 BannerItem.svelte 的 member 分支用 <BnRegular />），
+		// 抽到的不是游戏角色而是名单里的人（见 rollcall/draw.js）。
+		// member 不在 lists.json 里，故不能走 identifyBanner（会返回 undefined），直接构造。
+		list.push({
+			type: 'member',
+			bannerName: 'member',
+			bannerID: 'member-1',
+			runNumber: 1,
+			featured: ''
+		});
+
 		bannerList.set(list);
 		setFlattenWarpList(list);
 

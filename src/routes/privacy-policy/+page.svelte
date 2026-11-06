@@ -5,14 +5,14 @@
 
 <svelte:head>
 	<title>
-		Privacy Policy | {APP_TITLE}
+		隐私政策 | {APP_TITLE}
 	</title>
 </svelte:head>
 
 <section>
 	<header>
-		<h1>Privacy Policy for HSR.WishSimulator.App</h1>
-		<h2><a href="/">Honkai: Star Rail Warp Simulator</a></h2>
+		<h1>隐私政策</h1>
+		<h2><a href="/">{APP_TITLE}</a></h2>
 	</header>
 
 	<article>
@@ -36,8 +36,7 @@
 		justify-content: center;
 		align-items: center;
 		color: #fff;
-		background-image: url('https://i.ibb.co/ygKTfYj/out-of-control.webp');
-		background-size: cover;
+		background-image: linear-gradient(135deg, #131638 0%, #2a2f6b 60%, #131638 100%);
 		position: relative;
 	}
 	header::after {

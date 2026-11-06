@@ -7,10 +7,10 @@ import {
 import {
 	activePhase,
 	activeVersion,
-	animatedLC,
 	autoskip,
 	embers,
 	liteMode,
+	muted,
 	oneiric,
 	regReward,
 	regularPass,
@@ -21,13 +21,7 @@ import {
 	stellarJade,
 	warpAmount
 } from '$lib/stores/app-store';
-import {
-	customTracks,
-	localBalance,
-	localConfig,
-	rollCounter
-} from '$lib/helpers/dataAPI/api-localstorage';
-import { musics, muted } from '$lib/stores/phonograph-store';
+import { localBalance, localConfig, rollCounter } from '$lib/helpers/dataAPI/api-localstorage';
 
 const importLocalConfig = () => {
 	const { stellarJade: isj, ticketPass: pass, oneiric: ios } = initialAmount;
@@ -47,14 +41,12 @@ const importLocalConfig = () => {
 	starlight.set(isNaN(sl) ? 0 : sl);
 
 	const lSkipConfig = localConfig.get('autoskip') || {};
+	// 无存储记录时默认播放列车动画（「自动跳过」=否，用户 2026-11-05 复裁）
 	const { express = false, art = true } = lSkipConfig === true ? { express: true } : lSkipConfig;
 	autoskip.set({ express, art });
 
 	const llitemode = localConfig.get('litemode') || false;
 	liteMode.set(llitemode);
-
-	const llivecone = localConfig.get('livecone') || false;
-	animatedLC.set(llivecone);
 
 	const lWarpAmount = localConfig.get('warpAmount') || 'default';
 	warpAmount.set(lWarpAmount);
@@ -66,18 +58,9 @@ const importLocalConfig = () => {
 	const isRegRewardClaimed = localConfig.get('additionalClaimed');
 	regReward.set({ rollcount: regularRollCount, isClaimed: isRegRewardClaimed });
 
-	// Sounds
-	const { sfx = false, bgm = false } = localConfig.get('mutedSounds') || {};
-	muted.set({ bgm, sfx });
-
-	// Custom Music
-	const customBGM = customTracks.getAll();
-	musics.update((m) => {
-		customBGM.forEach(({ sourceID, title, description }) => {
-			m.push({ album: 'custom-musics', sourceID, title, description });
-		});
-		return m;
-	});
+	// Sounds（仅保留音效静音；BGM/留声机功能已移除）
+	const { sfx = false } = localConfig.get('mutedSounds') || {};
+	muted.set({ sfx });
 };
 
 const setBannerVersionAndPhase = () => {
