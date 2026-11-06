@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <!--
+          运行时窗口背景用 splash 图而非 @null：@null 会让 Activity 切换到
+          WebView 首帧绘制之间露出黑底（用户报的「启动黑屏一会儿」）。
+          splash 图延续启动画面观感，WebView 不透明绘制后自然盖住。
+        -->
+        <item name="android:background">@drawable/splash</item>
+        <!--
+          运行时主题也要带沉浸式属性：启动主题只覆盖 splash 阶段，
+          Activity 起来后切到本主题，缺了这些状态栏就会重新变成不透明的一条，
+          内容不再穿过状态栏（B1 的根因）。
+        -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <!--
+      启动主题：沉浸式 edge-to-edge。
+      - 状态栏/导航栏透明，内容铺到系统栏之下（配合 MainActivity 的
+        setDecorFitsSystemWindows(false) 与隐藏系统栏）
+      - shortEdges：横屏时允许内容延伸进挖孔/刘海区，不留黑边
+      - enforceStatusBarContrast / enforceNavigationBarContrast 关掉，
+        否则系统会为保证文字对比度自动加半透明遮罩，破坏游戏画面完整性
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+    </style>
+</resources>

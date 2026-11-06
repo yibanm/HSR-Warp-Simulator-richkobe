@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">星穹铁道跃迁模拟器</string>
+    <string name="title_activity_main">星穹铁道跃迁模拟器</string>
+    <string name="package_name">com.richkobe.hsrwarproll</string>
+    <string name="custom_url_scheme">com.richkobe.hsrwarproll</string>
+</resources>

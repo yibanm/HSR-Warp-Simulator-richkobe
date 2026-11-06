@@ -17,3 +17,13 @@ vite.config.ts.timestamp-*
 /src-tauri/target
 /src-tauri/gen/schemas
 
+# Capacitor 安卓壳：本地构建产物与签名密钥（key.properties 含 keystore 密码，永不入库）
+android/key.properties
+android/local.properties
+android/app/keystore.jks
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/app/src/main/assets/public/
+

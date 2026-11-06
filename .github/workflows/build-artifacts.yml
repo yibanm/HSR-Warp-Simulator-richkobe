@@ -121,7 +121,87 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # 发版搬运：把本 run 的两个发布资产挂到 v<version> tag 的 Release 上。
+  # 安卓移植版：Capacitor 壳打包同一份 Web 产物（完全离线，无外部服务）。
+  # 壳骨架与自研 MediaSaver 插件照 26.GenshinWishRoll 移植（包名 com.richkobe.hsrwarproll）。
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # Capacitor 8 的 CLI 硬性要求 Node >= 22（CI 的 20 会 fatal）
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web bundle (SvelteKit static → build/)
+        run: pnpm build
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Sync web bundle into Capacitor android project
+        run: npx cap sync android
+
+      - name: Read version from package.json
+        id: ver
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Decode signing keystore
+        env:
+          HSRW_KEYSTORE_BASE64: ${{ secrets.HSRW_KEYSTORE_BASE64 }}
+          HSRW_KEYSTORE_PASSWORD: ${{ secrets.HSRW_KEYSTORE_PASSWORD }}
+        run: |
+          # keystore 必须落在 android/app/ 下：build.gradle 的 signingConfigs 用
+          # file(keyProps['storeFile'])，相对路径以 app 模块目录为基准解析
+          echo "$HSRW_KEYSTORE_BASE64" | base64 -d > android/app/keystore.jks
+          # key.properties 用相对名：Java Properties 反斜杠是转义符，这里无路径分隔符最稳
+          {
+            echo "storeFile=keystore.jks"
+            echo "storePassword=$HSRW_KEYSTORE_PASSWORD"
+            echo "keyAlias=richkobe"
+            echo "keyPassword=$HSRW_KEYSTORE_PASSWORD"
+          } > android/key.properties
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --console=plain
+
+      - name: Verify signature fingerprint
+        working-directory: android
+        run: |
+          APK=$(find app/build/outputs/apk/release -name "*-android-arm64.apk" | head -1)
+          echo "APK: $APK"
+          # 主密钥 SHA-256 指纹（CLAUDE.md 0.10），不符即失败，防止误用 debug 签名发版
+          EXPECTED="7ca63dca32db31b1de61257eeee60e883c04f660381f8f3e678b70f66d1f13b4"
+          ACTUAL=$(${ANDROID_HOME}/build-tools/36.0.0/apksigner verify --print-certs "$APK" | grep -i "SHA-256" | head -1 | sed 's/.*: //')
+          echo "实际指纹: $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then echo "签名指纹与主密钥不符！"; exit 1; fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifact
+          path: android/app/build/outputs/apk/release/hsr-warp-roll-richkobe-${{ steps.ver.outputs.version }}-android-arm64.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # 发版搬运：把本 run 的三个发布资产挂到 v<version> tag 的 Release 上。
   # 为什么在 CI 里搬而不是本地上传：本地到 GitHub 的通道每 ~20MB 重置一次连接，
   # 上百 MB 的产物续传/分片都极慢且拼出过损坏文件；runner 与 GitHub 同内网，
   # download-artifact 取本 run 产物零外网传输，上传 Release 资产走内网稳定。
@@ -129,7 +209,7 @@ jobs:
     # 0.11 两阶段：dev 推送只做构建与测试，不碰 Release；
     # 合并主干（master）或推 tag 时才执行发版搬运
     if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-    needs: [build]
+    needs: [build, build-android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -142,6 +222,12 @@ jobs:
         with:
           name: release-artifacts
           path: win
+
+      - name: Download android artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifact
+          path: apk
 
       - name: Read version
         id: ver
@@ -181,5 +267,6 @@ jobs:
           gh release upload "$TAG" \
             "win/release/hsr-warp-roll-richkobe-$V-windows-x64-setup.exe" \
             "win/hsr-warp-roll-richkobe-$V-windows-x64-portable.zip" \
+            "apk/hsr-warp-roll-richkobe-$V-android-arm64.apk" \
             --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'
