@@ -43,9 +43,40 @@
 		addFunds();
 	};
 
-	const saveHandler = () => {
+	/** 文件名不能含 Windows 非法字符，也不用 toLocaleString（随系统语言变格式） */
+	const stamp = () => {
+		const d = new Date();
+		const p = (n) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(
+			d.getMinutes()
+		)}${p(d.getSeconds())}`;
+	};
+
+	const saveHandler = async () => {
 		playSfx('click2');
-		filesaver.saveAs(blob, `星穹铁道点名版 - ${new Date().toLocaleString()}.png`);
+		const filename = `星穹铁道点名版 - ${stamp()}.png`;
+		// 壳环境（WebView2）下 <a download> 的 blob 下载会被静默丢弃：
+		// 调试通道照样上报「下载已完成」，但磁盘上没有任何文件（2026-11-06 实测，
+		// Downloads 目录的修改时间停在两个月前）。改用 File System Access API 真实写盘，
+		// 普通浏览器不支持时才退回 file-saver。
+		if (typeof window.showSaveFilePicker === 'function') {
+			try {
+				const handle = await window.showSaveFilePicker({
+					suggestedName: filename,
+					types: [{ description: 'PNG 图片', accept: { 'image/png': ['.png'] } }]
+				});
+				const writable = await handle.createWritable();
+				await writable.write(blob);
+				await writable.close();
+				addFunds();
+				return;
+			} catch (e) {
+				// 用户在保存框里点了取消不是错误，也不该再触发一次下载
+				if (e?.name === 'AbortError') return;
+				console.error('保存截图失败：', e);
+			}
+		}
+		filesaver.saveAs(blob, filename);
 		addFunds();
 	};
 
@@ -72,7 +103,7 @@
 				url: shareLink
 			};
 
-			const files = new File([blob], `星穹铁道点名版 - ${new Date().toLocaleString()}.png`, {
+			const files = new File([blob], `星穹铁道点名版 - ${stamp()}.png`, {
 				type: blob.type,
 				lastModified: new Date().getTime()
 			});

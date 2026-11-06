@@ -57,24 +57,36 @@
 
 	// 图标 blob → objectURL 的缓存，避免每次渲染都重新读取 IndexedDB
 	const iconUrls = new Map();
-	// 触发响应式重算的版本号（Map 变更不会自动触发 Svelte 响应）
-	let iconVersion = 0;
 
+	/**
+	 * 读图标并把 objectURL 挂到条目副本上，最后整体重新赋值 items。
+	 *
+	 * 不能像原来那样只往 Map 里塞值：Map 不是响应式的，Svelte 追踪不到它的变更，
+	 * 图标是异步读出来的，读完模板也不会重绘 —— 表现为「缩略图不显示」，
+	 * 批量设图标写进去了却看不见，被误判成「批量设图标无效」（2026-11-06 实测）。
+	 * 原来为此准备的 iconVersion 计数器模板里从没引用过，等于白写。
+	 *
+	 * 用浅拷贝而不是直接改 it.iconUrl：items 来自 localStorage 的名单状态，
+	 * 直接挂字段会让 blob: URL 被 JSON.stringify 持久化进存储（跨会话失效且白占体积）。
+	 */
 	const loadIcons = async () => {
-		let changed = false;
+		const next = [];
 		for (const it of items) {
-			if (!it.iconKey || iconUrls.has(it.iconKey)) continue;
-			try {
-				const blob = await getIconBlob(it.iconKey);
-				if (blob) {
-					iconUrls.set(it.iconKey, URL.createObjectURL(blob));
-					changed = true;
+			let url = it.iconKey ? iconUrls.get(it.iconKey) : null;
+			if (it.iconKey && !url) {
+				try {
+					const blob = await getIconBlob(it.iconKey);
+					if (blob) {
+						url = URL.createObjectURL(blob);
+						iconUrls.set(it.iconKey, url);
+					}
+				} catch (e) {
+					console.error('读取图标失败：', e);
 				}
-			} catch (e) {
-				console.error('读取图标失败：', e);
 			}
+			next.push({ ...it, iconUrl: url || null });
 		}
-		if (changed) iconVersion++;
+		items = next;
 	};
 
 	const loadItems = async () => {
@@ -82,10 +94,12 @@
 		await loadIcons();
 	};
 
-	// 每条的图标地址：仅用户导入的图标（预置名单已移除）
-	const iconOf = (item) => {
-		if (item.iconKey) return iconUrls.get(item.iconKey) || null;
-		return null;
+	/** 释放缓存的 objectURL 并移除缓存项，供换图标/清图标后重读新 blob */
+	const releaseIconUrl = (iconKey) => {
+		if (!iconKey) return;
+		const url = iconUrls.get(iconKey);
+		if (url) URL.revokeObjectURL(url);
+		iconUrls.delete(iconKey);
 	};
 
 	onMount(loadItems);
@@ -303,7 +317,8 @@
 		}
 		try {
 			await setMemberIcon(listId, item.uid, file);
-			iconUrls.delete(item.iconKey || '');
+			// 换图标前先释放旧 objectURL，否则每换一次就漏一个 blob 引用
+			releaseIconUrl(item.iconKey);
 			await loadItems();
 			pushToast({ message: $t('rollcall.setIcon') });
 		} catch (e) {
@@ -314,7 +329,7 @@
 	const handleClearIcon = async (item) => {
 		playSfx('click2');
 		await clearMemberIcon(listId, item.uid);
-		iconUrls.delete(item.iconKey || '');
+		releaseIconUrl(item.iconKey);
 		await loadItems();
 	};
 </script>
@@ -418,8 +433,8 @@
 						<span class="box"><i class="hsr-check"></i></span>
 					</label>
 					<span class="thumb">
-						{#if iconOf(item)}
-							<img src={iconOf(item)} alt={item.name} loading="lazy" />
+						{#if item.iconUrl}
+							<img src={item.iconUrl} alt={item.name} loading="lazy" />
 						{:else}
 							<i class="hsr-character"></i>
 						{/if}

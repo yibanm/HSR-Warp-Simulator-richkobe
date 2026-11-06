@@ -58,26 +58,14 @@ const initSFX = () => {
 };
 initSFX();
 
-// 壳环境（WebView2）AudioContext 的解锁时机比浏览器更不可靠。howler 官方 autoUnlock
-// 默认已开启（源码 self.autoUnlock = true），无需重复设置；这里只加一层首次手势兜底：
-// 仅当 ctx 仍为 suspended 时 resume，幂等、无副作用。
-if (browser) {
-	const unlock = () => {
-		if (Howler.ctx?.state === 'suspended') Howler.ctx.resume();
-		document.removeEventListener('pointerdown', unlock, true);
-		document.removeEventListener('mousedown', unlock, true);
-		document.removeEventListener('keydown', unlock, true);
-	};
-	document.addEventListener('pointerdown', unlock, true);
-	document.addEventListener('mousedown', unlock, true);
-	document.addEventListener('keydown', unlock, true);
-}
-
 const sfxids = {};
 export const playSfx = (nameOfSoundfx = 'click') => {
 	try {
 		if (!sounds[nameOfSoundfx]) throw new Error('No Sound effect for ' + nameOfSoundfx);
 		if (isMuted()) return;
+		// 循环 BGM 必须单实例：结果页带 200ms 退场动画，连抽时旧页 onDestroy 还没跑、
+		// 新页 onMount 又 play 一条，howler 的 play() 每次新建循环轨 → 多轨叠播音量翻倍（炸音）。
+		if (nameOfSoundfx === 'warp-backsound') sounds[nameOfSoundfx].stop();
 		sfxids[nameOfSoundfx] = sounds[nameOfSoundfx].play();
 
 		if (nameOfSoundfx === 'warp-backsound') {

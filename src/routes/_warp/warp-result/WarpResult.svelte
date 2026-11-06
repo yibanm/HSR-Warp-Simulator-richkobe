@@ -355,6 +355,16 @@
 		transform: none;
 	}
 
+	/* 上方 .item-art.character img（特异度 0,2,1）会给头像套 translate(-50%,-50%) 与
+	   width:85%/height:auto，把名单头像推歪拉变形；这里用更高特异度盖回去 */
+	.item-art.character .member-card img {
+		position: static;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		transform: none;
+	}
+
 	.member-initial {
 		font-size: calc(0.1 * var(--screen-width));
 		color: rgba(255, 255, 255, 0.95);

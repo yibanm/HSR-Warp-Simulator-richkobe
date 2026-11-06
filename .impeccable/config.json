@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/routes/_warp/warp-result/WarpResult.svelte"
+        ],
+        "createdAt": "2026-11-06T13:50:42.096Z",
+        "reason": "false positive: img src is set at runtime by the use:lazyLoad action (upstream pattern), static analysis sees no src attribute"
+      }
+    ]
+  }
+}

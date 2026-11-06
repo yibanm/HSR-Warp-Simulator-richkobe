@@ -16,7 +16,7 @@
 	let event4star;
 	let event5star;
 	let showSkipButton = false;
-	// arrived 去重守卫：ended 事件与超时兜底可能先后触发，只认第一次，
+	// arrived 去重守卫：ended 事件与播放失败兜底可能先后触发，只认第一次，
 	// 否则 showSplashArt 被调两次会重置结果屏状态
 	let arrived = false;
 
@@ -50,26 +50,14 @@
 	});
 
 	/**
-	 * play() 的 Promise 在 WebView2/解码慢的环境下可能永远 pending（缓冲中既不 resolve 也不
-	 * reject），catch 接不住 pending → onExpressArrived 永不调用 → 卡星空（Tauri 壳实测复现）。
-	 * 超时兜底：8 秒内没开始播放就当失败直接出结果；已开始播放则交给 ended 事件收尾。
+	 * play() 的 Promise 在 WebView2 下可能永远 pending（缓冲中既不 resolve 也不 reject），
+	 * 不处理会让 .express 黑屏层永久盖住界面。
+	 *
+	 * 但不能用「N 秒没开始播就判失败并跳过动画」——冷启动时视频还在缓冲、paused 仍为 true，
+	 * 会把正常播放误杀成失败，用户表现为「列车动画直接没了」（2026-11-06 实测回归）。
+	 * 正确做法：只有 play() 明确 reject（自动播放被拦、解码器缺失）才跳过动画；
+	 * 单纯的 pending 不跳过，靠下方 2 秒亮出的 skip 按钮给用户手动逃生口，播放开始后由 ended 收尾。
 	 */
-	const PLAY_TIMEOUT_MS = 8000;
-	const playWithTimeout = (video) =>
-		Promise.race([
-			video.play(),
-			new Promise((_, reject) =>
-				setTimeout(() => reject(new Error('play timeout')), PLAY_TIMEOUT_MS)
-			)
-		]).then(
-			() => 'played',
-			(e) => {
-				// 超时但实际已在播放（竞态）：不算失败，交给 ended 收尾
-				if (!video.paused && !video.ended) return 'playing-late';
-				throw e;
-			}
-		);
-
 	const showVideoHandle = async (rarity, type) => {
 		let videoContent;
 		if (['starter', 'regular'].includes(type)) {
@@ -98,21 +86,57 @@
 			}
 		}
 
-		if (!videoContent || videoContent.error || isNaN(videoContent.duration)) {
-			// showToast = true;
-			console.error('Failed to call Astral Express!', videoContent.error);
+		// video 的 src 来自 IndexedDB 的 blob（见 express-loader.js）。blob 可能 size 正常但底层
+		// 数据不可读（Chromium 被强杀会留下这种「幽灵 blob」），此时 <video> 报
+		// MediaError code4: Format error。而 express-loader 的 check() 只校验 6 个 key 是否齐全、
+		// 从不校验 blob 可用性，坏 blob 会被绑上 video → 动画整段被跳过（2026-11-06 壳内实测）。
+		// 静态文件本身是好的，故降级到 /videos/*.mp4 直接播，动画得以保留。
+		const isRegular = ['starter', 'regular'].includes(type);
+		const staticSrc = `/videos/${isRegular ? 'regular' : 'event'}-${rarity}star.mp4`;
+
+		if (!videoContent) {
+			console.error('Failed to call Astral Express: 未找到对应稀有度的 video 元素');
 			return onExpressArrived();
+		}
+		if (videoContent.error || isNaN(videoContent.duration)) {
+			console.error('Astral Express 视频不可用，降级到静态文件：', videoContent.error);
+			videoContent.src = staticSrc;
+			videoContent.load();
+			// 等静态文件的元数据就绪；失败才放弃动画，避免直接砍掉整段演出
+			const ready = await new Promise((ok) => {
+				const timer = setTimeout(() => ok(false), 8000);
+				videoContent.addEventListener(
+					'loadedmetadata',
+					() => {
+						clearTimeout(timer);
+						ok(true);
+					},
+					{ once: true }
+				);
+				videoContent.addEventListener(
+					'error',
+					() => {
+						clearTimeout(timer);
+						ok(false);
+					},
+					{ once: true }
+				);
+			});
+			if (!ready || isNaN(videoContent.duration)) {
+				console.error('静态视频也不可用，跳过动画直接出结果');
+				return onExpressArrived();
+			}
 		}
 		videoContent.style.display = 'unset';
 		// 2 秒内还没开始播放就主动亮出跳过按钮（原逻辑要点屏幕才出现，卡住时用户无从下手）
 		setTimeout(() => {
 			if (!arrived && videoContent.paused) showSkipButton = true;
 		}, 2000);
-		// play() 必须 catch：视频未加载完/被浏览器拦截自动播放时它会 reject，
-		// 不接住的话整个函数中断，onExpressArrived 永不调用，
-		// .express 黑屏层会永远盖在主界面上（用户表现为「动画不完整、卡黑屏」）
+		// 只接明确的 reject：play() 因自动播放被拦或解码器缺失而 reject 时跳过动画，
+		// 否则 .express 黑屏层会永远盖在主界面上（用户表现为「动画不完整、卡黑屏」）。
+		// pending（还在缓冲）不跳过——跳过就等于把动画砍掉。
 		try {
-			await playWithTimeout(videoContent);
+			await videoContent.play();
 		} catch (e) {
 			console.error('星穹列车动画播放失败，直接展示结果：', e);
 			return onExpressArrived({ skip: true });
