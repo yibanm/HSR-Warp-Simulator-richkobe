@@ -41,7 +41,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 22 而非 20：@capacitor/cli 8 的 engines.node 要求 >=22，
+          # 而 .npmrc 的 engine-strict=true 会让 pnpm install 直接 fatal
+          node-version: 22
           cache: pnpm
 
       # Tauri 需要 Rust 工具链编译原生壳（WebView2 由系统提供，不打包进产物）
