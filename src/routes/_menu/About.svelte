@@ -12,6 +12,21 @@
 	let qrLoaded = false;
 
 	/**
+	 * Tauri 壳内 target="_blank" 的新窗口请求被 WebView2 静默吞掉（点了没反应），
+	 * 壳内改走 opener 插件调系统默认浏览器；浏览器环境保持原生锚点行为。
+	 */
+	const openExternal = async (event, url) => {
+		if (!window.__TAURI_INTERNALS__) return;
+		event.preventDefault();
+		try {
+			const { openUrl } = await import('@tauri-apps/plugin-opener');
+			await openUrl(url);
+		} catch (e) {
+			console.error('打开外部链接失败：', e);
+		}
+	};
+
+	/**
 	 * 关于页（同步原神版 E4，中文修改版新增）
 	 *
 	 * 内容：版本号 + 仓库链接 + Issues 入口 + 求 star + 赞赏码。
@@ -28,14 +43,27 @@
 		<p class="intro">{$t('about.intro')}</p>
 
 		<div class="links">
-			<a href={HOST} target="_blank" rel="noopener noreferrer">{$t('about.repo')}</a>
-			<a href={`${HOST}/issues`} target="_blank" rel="noopener noreferrer">
+			<a href={HOST} target="_blank" rel="noopener noreferrer" on:click={(e) => openExternal(e, HOST)}>
+				{$t('about.repo')}
+			</a>
+			<a
+				href={`${HOST}/issues`}
+				target="_blank"
+				rel="noopener noreferrer"
+				on:click={(e) => openExternal(e, `${HOST}/issues`)}
+			>
 				{$t('about.issues')}
 			</a>
 		</div>
 
 		<p class="star-hint">{$t('about.starHint')}</p>
-		<a class="star-btn" href={HOST} target="_blank" rel="noopener noreferrer">
+		<a
+			class="star-btn"
+			href={HOST}
+			target="_blank"
+			rel="noopener noreferrer"
+			on:click={(e) => openExternal(e, HOST)}
+		>
 			<i class="hsr-star"></i> {$t('about.star')}
 		</a>
 
