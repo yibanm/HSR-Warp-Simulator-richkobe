@@ -16,7 +16,7 @@
  *
  * 平台分派：
  *   - Tauri 桌面：自研 Rust 命令，数据根 = exe 目录/data/
- *   - Capacitor 安卓：@capacitor/filesystem 的 ExternalStorage
+ *   - Capacitor 安卓：@capacitor/filesystem 的 ExternalData（/storage/emulated/0/Android/data/<包名>/files，免权限）
  *     （即 /storage/emulated/0/Android/data/<包名>/files，免存储权限）
  *   - 浏览器：无文件系统可用，回退 localStorage（仅 dev/网页版）
  */
@@ -46,7 +46,7 @@ const capRead = async (rel, encoding) => {
 	try {
 		const r = await Filesystem.readFile({
 			path: `${ANDROID_DIR}/${rel}`,
-			directory: Directory.ExternalStorage,
+			directory: Directory.ExternalData,
 			encoding
 		});
 		return r.data;
@@ -61,7 +61,7 @@ const capWrite = async (rel, data, encoding) => {
 	await Filesystem.writeFile({
 		path: `${ANDROID_DIR}/${rel}`,
 		data,
-		directory: Directory.ExternalStorage,
+		directory: Directory.ExternalData,
 		encoding,
 		recursive: true
 	});
@@ -70,7 +70,7 @@ const capWrite = async (rel, data, encoding) => {
 const capDelete = async (rel) => {
 	const { Filesystem, Directory } = await capDir();
 	try {
-		await Filesystem.deleteFile({ path: `${ANDROID_DIR}/${rel}`, directory: Directory.ExternalStorage });
+		await Filesystem.deleteFile({ path: `${ANDROID_DIR}/${rel}`, directory: Directory.ExternalData });
 	} catch (e) {
 		if (!String(e?.message || e).includes('not exist')) throw e;
 	}
@@ -158,7 +158,7 @@ export const fileStore = {
 				try {
 					const r = await Filesystem.readdir({
 						path: prefix ? `${ANDROID_DIR}/${prefix}` : ANDROID_DIR,
-						directory: Directory.ExternalStorage
+						directory: Directory.ExternalData
 					});
 					entries = r.files;
 				} catch {
