@@ -35,8 +35,9 @@
 				const idx = cursor++;
 				const { path, asset } = raw[idx];
 				const blob = await withTimeout(blobAssets(path), FETCH_TIMEOUT_MS);
-				if (blob === 'error') anyError = true;
-				results[idx] = { url: blob, name: asset };
+				// 失败/超时回退直连路径：blob 链整链失败时（安卓 WebView 实测）
+				// 画面仍完整，只是少了 blob 缓存优化；不再弹「部分素材失败」模态挡路
+				results[idx] = { url: blob === 'error' ? path : blob, name: asset };
 				done++;
 				current = (done / raw.length) * 100;
 			}

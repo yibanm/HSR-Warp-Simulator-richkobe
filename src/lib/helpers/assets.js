@@ -187,7 +187,10 @@ export const blobAssets = async (path) => {
 		const url = DOMURL.createObjectURL(blob);
 		return url;
 	} catch (e) {
-		console.error(e);
-		return 'error';
+		// 回退直连路径而非 'error' 字符串：安卓 WebView 下 blob 链曾整链失败
+		// （2026-11-07 真机截图：背景/缩略图/图标全黑，直连的立绘正常），
+		// 直连 URL 至少保证画面完整，只是少了 blob 缓存那层优化
+		console.error('素材 blob 化失败，回退直连：', path, e);
+		return path;
 	}
 };
