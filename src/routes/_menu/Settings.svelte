@@ -9,8 +9,63 @@
 
 	import Scrollable from '$lib/components/Scrollable.svelte';
 	import OptionsItem from './_settings-option.svelte';
+	import { pushToast } from '$lib/stores/toast';
+	import {
+		exportAllData,
+		exportFileName,
+		importAllData,
+		pickZipFile,
+		saveDataBlob
+	} from '$lib/helpers/dataAPI/data-transfer';
 
 	export let activeOption;
+
+	// ---- 数据导入导出（用户 2026-11-07 要求：明文压缩包，含所有数据）----
+	let transferring = false;
+
+	const handleExport = async () => {
+		if (transferring) return;
+		transferring = true;
+		try {
+			const blob = await exportAllData();
+			const r = await saveDataBlob(blob, exportFileName());
+			if (r.status === 'saved') {
+				pushToast({
+					message: r.path ? `已导出到：${r.path}` : '数据已导出为压缩包',
+					type: 'success'
+				});
+			} else if (r.status === 'failed') {
+				pushToast({ message: '导出失败，请重试', type: 'error' });
+			}
+		} catch (e) {
+			console.error('导出失败：', e);
+			pushToast({ message: '导出失败：' + (e?.message || e), type: 'error' });
+		} finally {
+			transferring = false;
+		}
+	};
+
+	const handleImport = async () => {
+		if (transferring) return;
+		transferring = true;
+		try {
+			const blob = await pickZipFile();
+			if (!blob) return;
+			const n = await importAllData(blob);
+			if (!n) {
+				pushToast({ message: '压缩包内没有可导入的数据文件', type: 'error' });
+				return;
+			}
+			pushToast({ message: `已导入 ${n} 个数据文件，即将重新加载`, type: 'success' });
+			// 内存缓存需重读：刷新页面是最稳的重载方式
+			setTimeout(() => window.location.reload(), 1200);
+		} catch (e) {
+			console.error('导入失败：', e);
+			pushToast({ message: '导入失败：' + (e?.message || e), type: 'error' });
+		} finally {
+			transferring = false;
+		}
+	};
 
 	// Lite Mode
 	const handleLiteMode = ({ detail }) => {
@@ -138,6 +193,20 @@
 				</OptionsItem>
 			</div>
 		{/if}
+
+		<!-- 数据导入导出：明文压缩包，含设置/抽卡记录/保底/名单/头像全部数据 -->
+		<h2>数据导入导出</h2>
+		<p class="transfer-hint">
+			导出为明文压缩包（zip），内含全部数据文件，解压可直接查看；导入会用包内数据覆盖当前数据并重新加载。
+		</p>
+		<div class="transfer-btns">
+			<button type="button" class="transfer-btn" disabled={transferring} on:click={handleExport}>
+				<i class="hsr-download"></i> 导出数据
+			</button>
+			<button type="button" class="transfer-btn" disabled={transferring} on:click={handleImport}>
+				<i class="hsr-save"></i> 导入数据
+			</button>
+		</div>
 	</Scrollable>
 </div>
 
@@ -154,5 +223,41 @@
 
 	h2:first-child {
 		margin-top: 0;
+	}
+
+	.transfer-hint {
+		font-size: 0.8rem;
+		opacity: 0.75;
+		line-height: 1.6;
+		margin: 0 0 0.6rem;
+	}
+
+	.transfer-btns {
+		display: flex;
+		gap: 0.8rem;
+		flex-wrap: wrap;
+	}
+
+	.transfer-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 1.1rem;
+		border-radius: 2rem;
+		border: 1px solid rgba(255, 255, 255, 0.35);
+		background-color: rgba(255, 255, 255, 0.12);
+		color: inherit;
+		font-size: 0.9rem;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	.transfer-btn:hover:not(:disabled) {
+		background-color: rgba(255, 255, 255, 0.22);
+	}
+
+	.transfer-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 </style>

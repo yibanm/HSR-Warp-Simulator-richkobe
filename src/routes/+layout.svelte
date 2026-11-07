@@ -21,6 +21,9 @@
 	import { mountLocale } from '$lib/helpers/i18n';
 	import { toast, closeToast } from '$lib/stores/toast';
 	import { initRollcall } from '$lib/helpers/dataAPI/api-rollcall';
+	import { initStorage } from '$lib/helpers/dataAPI/api-localstorage';
+	import { initPrefs } from '$lib/helpers/dataAPI/api-cookie';
+	import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
 
 	import InitialLoader from './_index/InitialLoader.svelte';
 	import Toast from '$lib/components/Toast.svelte';
@@ -73,12 +76,22 @@
 		});
 
 		wakeLock(); // Prevent screen off while open the app
+
+		// 数据层初始化必须先于一切读存储的逻辑：明文文件读入内存缓存，
+		// 缺失时从旧 localStorage/cookie/IndexedDB 一次性迁移（2026-11-07 数据落盘改造）
+		await initStorage();
+		await initPrefs();
+
 		await IDBUpdater(); // update site data to the newer version
+
+		// 触发抽卡历史的一次性迁移（HistoryManager 惰性加载，不碰就不会把旧
+		// IndexedDB 历史搬进 gacha/history.json）；顺带预热内存缓存
+		HistoryManager.getAllHistories().catch((e) => console.error('历史迁移失败：', e));
 
 		// 点名名单：在应用级初始化（读取存储、清理指向已删名单的勾选与池进度）。
 		// 必须放这里而不是名单管理页——若只在管理页初始化，卡面与抽卡入口首次渲染时
 		// 读不到勾选状态，会一直显示「未勾选名单」。
-		initRollcall();
+		await initRollcall();
 
 		// Service Worker for Faster Load
 		// 壳环境（Tauri/Electron 注入 __TAURI__/electronAPI）不注册 SW：自定义协议下

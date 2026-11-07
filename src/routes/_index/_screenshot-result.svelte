@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { t } from 'svelte-i18n';
-	import * as filesaver from 'file-saver';
+	import { saveDataBlob } from '$lib/helpers/dataAPI/data-transfer';
 
 	import { APP_TITLE } from '$lib/data/site-setup.json';
 	import { initialAmount } from '$lib/data/warp-setup.json';
@@ -55,29 +55,12 @@
 	const saveHandler = async () => {
 		playSfx('click2');
 		const filename = `星穹铁道点名版 - ${stamp()}.png`;
-		// 壳环境（WebView2）下 <a download> 的 blob 下载会被静默丢弃：
-		// 调试通道照样上报「下载已完成」，但磁盘上没有任何文件（2026-11-06 实测，
-		// Downloads 目录的修改时间停在两个月前）。改用 File System Access API 真实写盘，
-		// 普通浏览器不支持时才退回 file-saver。
-		if (typeof window.showSaveFilePicker === 'function') {
-			try {
-				const handle = await window.showSaveFilePicker({
-					suggestedName: filename,
-					types: [{ description: 'PNG 图片', accept: { 'image/png': ['.png'] } }]
-				});
-				const writable = await handle.createWritable();
-				await writable.write(blob);
-				await writable.close();
-				addFunds();
-				return;
-			} catch (e) {
-				// 用户在保存框里点了取消不是错误，也不该再触发一次下载
-				if (e?.name === 'AbortError') return;
-				console.error('保存截图失败：', e);
-			}
-		}
-		filesaver.saveAs(blob, filename);
-		addFunds();
+		// 壳环境（WebView2）下 <a download> 与 showSaveFilePicker 都不可靠：
+		// 前者被静默丢弃（CDP 报 completed 但磁盘无文件），后者存在却不弹框
+		// （均 2026-11-06/07 实测）。统一走 saveDataBlob：桌面壳弹原生保存框、
+		// 安卓存下载目录、浏览器回退 file-saver。
+		const r = await saveDataBlob(blob, filename);
+		if (r.status === 'saved') addFunds();
 	};
 
 	const facebookHandle = () => {

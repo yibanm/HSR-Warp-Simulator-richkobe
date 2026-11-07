@@ -1,5 +1,4 @@
 import { assets } from '$lib/stores/app-store';
-import { AssetManager } from '$lib/helpers/dataAPI/api-indexeddb';
 import { writable } from 'svelte/store';
 
 const expressList = [
@@ -11,21 +10,28 @@ const expressList = [
 	'event-5star.mp4'
 ];
 
+/**
+ * 跃迁动画视频直接读包内静态资源，不再经 IndexedDB 缓存。
+ *
+ * 2026-11-07 起数据层全面改明文文件存储；视频属应用资源而非用户数据，
+ * 留在包内即可（IDB 缓存曾出现 blob 底层文件丢失导致抽卡按钮永久 disabled，
+ * 去掉缓存层该故障自然消失）。check 改为 HEAD 探测六个资源是否可读。
+ */
 export const check = async () => {
-	const loadedData = [];
-
-	for (let i = 0; i < expressList.length; i++) {
-		const key = expressList[i];
-		const storedData = await AssetManager.get(key);
-		if (!storedData) continue;
-		loadedData.push(storedData);
-	}
-
-	const allComplete = loadedData.length === expressList.length;
+	const results = await Promise.all(
+		expressList.map(async (key) => {
+			try {
+				const r = await fetch(`/videos/${key}`, { method: 'HEAD' });
+				return r.ok;
+			} catch {
+				return false;
+			}
+		})
+	);
+	const allComplete = results.every(Boolean);
 	if (allComplete) {
-		const DOMURL = window.URL || window.webkitURL;
 		assets.update((v) => {
-			loadedData.forEach(({ key, blob }) => (v[key] = DOMURL.createObjectURL(blob)));
+			expressList.forEach((key) => (v[key] = `/videos/${key}`));
 			return v;
 		});
 	}
@@ -42,9 +48,6 @@ export const loadAnimation = async () => {
 		const response = await fetch(`/videos/${expressList[i]}`);
 		const data = new Response(streamResponse(response));
 		const blob = await data.blob();
-
-		// Save to IDB
-		await AssetManager.put({ key: expressList[i], blob });
 
 		const DOMURL = window.URL || window.webkitURL;
 		const blobUrl = DOMURL.createObjectURL(blob);

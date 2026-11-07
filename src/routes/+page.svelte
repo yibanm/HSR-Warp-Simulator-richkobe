@@ -13,7 +13,8 @@
 	import { browserState } from '$lib/helpers/page-navigation';
 	import { handleShowStarter, initializeBanner } from '$lib/helpers/banner-loader';
 	import { userCurrencies } from '$lib/helpers/shop-price';
-	import { localConfig } from '$lib/helpers/dataAPI/api-localstorage';
+	import { localConfig, initStorage } from '$lib/helpers/dataAPI/api-localstorage';
+	import { cookie, initPrefs } from '$lib/helpers/dataAPI/api-cookie';
 
 	import Welcome from './_index/Welcome.svelte';
 	import PreloadExpress from './_index/PreloadExpress.svelte';
@@ -61,14 +62,13 @@
 	const onWarp = writable(false);
 	setContext('onWarp', onWarp);
 
-	onMount(() => {
-		// 勾过「不再提示」后启动不弹欢迎窗。读取失败（隐私模式等）按默认弹出。
-		// 放 onMount 而非模块顶层：本路由 prerender，顶层碰 localStorage 会在构建期报错
-		try {
-			if (localStorage.getItem('hsrws-hide-welcome') === '1') welcomeScreen = false;
-		} catch (e) {
-			/* 读不到就照常弹窗 */
-		}
+	onMount(async () => {
+		// 子组件 onMount 早于 layout 的初始化 await：这里先确保文件缓存就绪，
+		// 再同步读偏好（init 内部有 loaded 标志，layout 再调不会重复 IO）
+		await initStorage();
+		await initPrefs();
+		// 勾过「不再提示」后启动不弹欢迎窗。状态存 config/ui-prefs.json
+		if (cookie.get('hideWelcome') === '1') welcomeScreen = false;
 
 		setBannerVersionAndPhase();
 		importLocalConfig();

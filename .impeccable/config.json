@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-11-06T13:50:42.096Z",
         "reason": "false positive: img src is set at runtime by the use:lazyLoad action (upstream pattern), static analysis sees no src attribute"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/routes/styles.css"
+        ],
+        "createdAt": "2026-11-07T02:20:22.506Z",
+        "reason": "sanctioned: game title logo uses gradient text by upstream design intent, not AI slop; untouched by this session's changes"
       }
     ]
   }

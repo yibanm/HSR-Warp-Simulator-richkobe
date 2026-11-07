@@ -46,12 +46,12 @@
 8. 多名单管理：新建、重命名、删除、勾选启用，多名单可合并成一个池抽取
 9. 名单编辑器：设星级、设头像图标、多选批量操作（批量删除 / 设星级 / 设图标）
 10. 点名规则公平：十连内同一个人不会重复被点，星级只作展示、不影响概率
-11. 名单与图标只存本机（localStorage 与 IndexedDB），不上传任何地方
+11. 名单与图标只存本机（明文文件，分类子目录），不上传任何地方
 
 **其他**
 
 12. 界面全中文，含关于页与更新日志页
-13. 数据全部保存在本地存储，清除/重置由你手动操作
+13. 数据全部以明文文件保存在程序目录（Windows）或应用外部目录（安卓），清除/重置由你手动操作
 14. 安卓版横屏全屏运行，截图与备份直存系统下载目录
 
 ## 保底与概率
@@ -112,7 +112,7 @@ npx tauri build   # Windows 桌面壳（需 Rust 工具链）
 ```
 src/
   routes/          页面：跃迁(_warp)、菜单(_menu)、点名(Rollcall/编辑器)
-  lib/helpers/     抽卡概率、名单抽取(rollcall/)、音效、IndexedDB 封装
+  lib/helpers/     抽卡概率、名单抽取(rollcall/)、音效、文件存储适配(file-store)
   lib/data/        角色/光锥/卡池数据与中文语言包
 android/           Capacitor 安卓壳（含直存 Download 的自研插件）
 src-tauri/         Tauri Windows 壳与 NSIS 安装器配置
@@ -124,7 +124,7 @@ src-tauri/         Tauri Windows 壳与 NSIS 安装器配置
 
 **名单导入后是乱码？** TXT 支持 UTF-8 与 GBK 两种编码，仍乱码请转成 UTF-8 再导入。
 
-**数据存在哪里？** 全部在本机：抽卡记录与名单在浏览器本地存储（IndexedDB / localStorage），不联网上传。
+**数据存在哪里？** 全部在本机明文文件：Windows 为程序所在文件夹 data/ 目录（config/gacha/rollcall 子目录），安卓为 /storage/emulated/0/Android/data/<包名>/files/hsr-data/，不联网上传。
 
 ## 许可证
 

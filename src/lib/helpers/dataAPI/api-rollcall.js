@@ -1,26 +1,28 @@
 import { writable } from 'svelte/store';
-import { AssetManager } from './api-indexeddb';
+import { fileStore, readJson, writeJson } from './file-store';
 
 /**
  * 点名名单管理（中文魔改版新增功能，上游没有）
  *
- * 存储分层：
- * - 名单配置与勾选状态：localStorage（同步读写，UI 响应快）
- * - 自定义导入的图标：IndexedDB 的 assets store（复用 AssetManager，blob 不适合塞进 localStorage）
- * - 洗牌池进度：localStorage，保证刷新页面后不会重复点到同一个人
+ * 存储分层（2026-11-07 起全部明文落盘，用户要求数据存 exe 所在文件夹分类放好）：
+ * - 名单配置与勾选/洗牌池状态：rollcall/lists.json（同步读内存缓存，异步落盘）
+ * - 自定义导入的图标：rollcall/icons/<key>.<ext> 图片文件
  *
  * 名单形态：全部为用户自建名单（默认纯文字，可导入图标、可指定星级）。
  * 与原神版 v1.0.1 一致：不内置任何预置名单，用户数据完全由用户自己导入，
  * 避免把任何名单内容打包进仓库与产物。抽卡时可勾选启用多套，支持单选/多选/混用。
  */
 
-const STORAGE_KEY = 'rollcall';
+const LISTS_FILE = 'rollcall/lists.json';
+const ICON_DIR = 'rollcall/icons';
 const ICON_KEY_PREFIX = 'rollcall-icon-';
+/** 旧版 localStorage 键（迁移来源） */
+const LEGACY_KEY = 'rollcall';
 
 // 单个自定义名单的数据形状
 // { id, label, builtin:false, items:[{ uid, name, iconKey|null, rarity|null }], createdAt }
 
-/** localStorage 里的完整状态 */
+/** 名单状态默认值 */
 const defaults = () => ({
 	// 用户自建的名单列表
 	customLists: [],
@@ -33,36 +35,51 @@ const defaults = () => ({
 	seq: 1
 });
 
-const readState = () => {
+const readState = async () => {
 	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
+		const fromFile = await readJson(LISTS_FILE, undefined);
+		if (fromFile !== undefined) return { ...defaults(), ...fromFile };
+		// 文件不存在：回退旧 localStorage 完成一次性迁移
+		const raw = localStorage.getItem(LEGACY_KEY);
 		if (!raw) return defaults();
 		const parsed = JSON.parse(raw);
-		// 兼容旧数据缺字段，避免 undefined 崩溃
-		return { ...defaults(), ...parsed };
+		const merged = { ...defaults(), ...parsed };
+		// 迁移落盘，下次起直接读文件
+		writeJson(LISTS_FILE, merged).catch((e) => console.error('名单迁移落盘失败：', e));
+		return merged;
 	} catch (e) {
 		console.error('点名名单数据解析失败，已重置为默认：', e);
 		return defaults();
 	}
 };
 
-const writeState = (state) => {
+const readLegacySync = () => {
 	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+		const raw = localStorage.getItem(LEGACY_KEY);
+		if (!raw) return null;
+		return { ...defaults(), ...JSON.parse(raw) };
 	} catch (e) {
-		// localStorage 满（配额约 5MB）时不能静默失败，否则用户以为保存成功了
-		console.error('点名名单写入失败（可能超出浏览器存储配额）：', e);
-		throw e;
+		return null;
 	}
 };
 
-let state = null;
+const writeState = (s) => {
+	writeJson(LISTS_FILE, s).catch((e) => {
+		// 落盘失败不能静默：用户以为保存成功了
+		console.error('点名名单写入失败：', e);
+	});
+};
+
+// 模块加载即同步读旧 localStorage 作初始值：footer/编辑器的 onMount 早于
+// layout 的 initRollcall await，同步 getState 必须此刻就有数据
+let state = typeof localStorage !== 'undefined' ? readLegacySync() : null;
 
 // 对外暴露的 store，供 UI 订阅
 export const rollcallStore = writable(null);
 
 const getState = () => {
-	if (state === null) state = readState();
+	// init 前被同步调用时给默认值兜底，init 完成后即真实数据
+	if (state === null) state = defaults();
 	return state;
 };
 
@@ -93,9 +110,9 @@ const snapshot = () => {
 	};
 };
 
-/** 初始化并推送首次快照（在应用启动时调用一次） */
-export const initRollcall = () => {
-	state = readState();
+/** 初始化并推送首次快照（在应用启动时调用一次；读文件故为异步） */
+export const initRollcall = async () => {
+	state = await readState();
 	// 清理指向已不存在名单的勾选与池数据（例如用户删了某个自定义名单）
 	const validIds = new Set(state.customLists.map((l) => l.id));
 	const before = state.selected.length;
@@ -165,7 +182,7 @@ export const deleteList = async (listId) => {
 	for (const item of removed.items) {
 		if (item.iconKey) {
 			try {
-				await AssetManager.delete(item.iconKey);
+				await deleteIconFiles(item.iconKey);
 			} catch (e) {
 				console.error('清理名单图标失败：', e);
 			}
@@ -229,7 +246,7 @@ export const removeMembers = async (listId, uids, keepIcons = false) => {
 		for (const it of removed) {
 			if (it.iconKey && !stillUsed.has(it.iconKey)) {
 				try {
-					await AssetManager.delete(it.iconKey);
+					await deleteIconFiles(it.iconKey);
 				} catch (e) {
 					console.error('清理名单图标失败：', e);
 				}
@@ -272,7 +289,7 @@ export const setMembersIcon = async (listId, uids, blob) => {
 	const uidSet = new Set(uids);
 	const targets = list.items.filter((it) => uidSet.has(it.uid));
 	if (!targets.length) throw new Error('条目不存在');
-	const key = await AssetManager.put({ blob });
+	const key = await putIconFile(blob);
 	targets.forEach((it) => {
 		it.iconKey = key;
 	});
@@ -312,7 +329,7 @@ export const setMemberIcon = async (listId, uid, blob) => {
 	if (blob.size > 2 * 1024 * 1024) throw new Error('图片过大（上限 2MB）');
 
 	const iconKey = `${ICON_KEY_PREFIX}${listId}-${uid}`;
-	await AssetManager.put({ key: iconKey, blob, type: blob.type || 'image/png' });
+	await putIconFile(blob, iconKey);
 	// 换图时旧 key 与新 key 同名，put 直接覆盖，无需先删
 	item.iconKey = iconKey;
 	commit();
@@ -326,7 +343,7 @@ export const clearMemberIcon = async (listId, uid) => {
 	const item = list && list.items.find((it) => it.uid === uid);
 	if (!item || !item.iconKey) return false;
 	try {
-		await AssetManager.delete(item.iconKey);
+		await deleteIconFiles(item.iconKey);
 	} catch (e) {
 		console.error('删除图标失败：', e);
 	}
@@ -335,11 +352,44 @@ export const clearMemberIcon = async (listId, uid) => {
 	return true;
 };
 
+/** 图标文件扩展名（mime → 扩展名） */
+const extOf = (mime) =>
+	({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' })[mime] ||
+	'png';
+const ICON_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif'];
+const iconRel = (key, ext) => `${ICON_DIR}/${key}.${ext}`;
+
+/** 写图标文件；显式 key 优先，否则按时间戳生成（旧实现无 key 时返回 undefined 是 bug） */
+const putIconFile = async (blob, explicitKey) => {
+	const key = explicitKey || `rollcall-icon-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+	const u8 = new Uint8Array(await blob.arrayBuffer());
+	await fileStore.writeBytes(iconRel(key, extOf(blob.type)), u8);
+	return key;
+};
+
+/** 删图标文件：key 不带扩展名，逐个试删（不存在即跳过） */
+const deleteIconFiles = async (iconKey) => {
+	for (const ext of ICON_EXTS) {
+		try {
+			await fileStore.delete(iconRel(iconKey, ext));
+		} catch (e) {
+			// 单个扩展名不存在不算失败
+		}
+	}
+};
+
 /** 读取图标 blob（UI 用 URL.createObjectURL 转成可显示地址） */
 export const getIconBlob = async (iconKey) => {
 	if (!iconKey) return null;
-	const record = await AssetManager.get(iconKey);
-	return record?.blob || null;
+	for (const ext of ICON_EXTS) {
+		try {
+			const u8 = await fileStore.readBytes(iconRel(iconKey, ext));
+			return new Blob([u8], { type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+		} catch (e) {
+			if (!String(e?.message || e).includes('ENOENT')) console.error('读取图标失败：', e);
+		}
+	}
+	return null;
 };
 
 /**

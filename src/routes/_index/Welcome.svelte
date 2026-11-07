@@ -7,21 +7,15 @@
 	import { brief } from '$lib/data/updates.json';
 	import { isPWA } from '$lib/stores/app-store';
 	import { browserDetect } from '$lib/helpers/mobile-detect';
+	import { cookie } from '$lib/helpers/dataAPI/api-cookie';
 	import { playSfx } from '$lib/helpers/sounds/audiofx';
 
 	const closeWelcomeScreen = getContext('closeGreeting');
-	// 「不再提示」勾选状态：提交时写入 localStorage，下次启动由 +page.svelte 读取跳过弹窗
+	// 「不再提示」勾选状态：提交时写入 config/ui-prefs.json，下次启动由 +page.svelte 读取跳过弹窗
 	let dontShowAgain = false;
 	const handleSubmit = () => {
 		playSfx();
-		if (dontShowAgain) {
-			try {
-				localStorage.setItem('hsrws-hide-welcome', '1');
-			} catch (e) {
-				// 隐私模式等写入失败不影响进入模拟器，仅下次仍会弹窗
-				console.error('保存「不再提示」失败：', e);
-			}
-		}
+		if (dontShowAgain) cookie.set('hideWelcome', '1');
 		closeWelcomeScreen();
 	};
 </script>

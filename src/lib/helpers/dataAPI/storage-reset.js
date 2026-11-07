@@ -23,11 +23,12 @@ import {
 	warpAmount
 } from '$lib/stores/app-store';
 import { HistoryManager } from '$lib/helpers/dataAPI/api-indexeddb';
-import { localConfig, storageLocal } from '$lib/helpers/dataAPI/api-localstorage';
+import { localConfig, removeStoredKey, storageLocal } from '$lib/helpers/dataAPI/api-localstorage';
 
 const { clearIDB } = HistoryManager;
 
 const clearCacheStorage = async () => {
+	if (typeof caches === 'undefined') return true;
 	const keys = await caches.keys();
 	for (const key of keys) await caches.delete(key);
 	return true;
@@ -42,25 +43,23 @@ export const storageReset = async ({ keepSetting = false, clearCache = false } =
 	regReward.set({ rollcount: 0, isClaimed: false });
 
 	if (keepSetting) {
-		const config = storageLocal.get('config');
-		const pity = storageLocal.get('pity');
-		const balance = storageLocal.get('balance');
-		const probabilityRates = storageLocal.get('probabilityRates');
-		localStorage.removeItem('WarpSimulator');
-		delete config.additionalClaimed;
-
-		storageLocal.set('config', config);
-		storageLocal.set('pity', pity);
-		storageLocal.set('balance', balance);
-		storageLocal.set('probabilityRates', probabilityRates);
+		// 保留设置/保底/余额/概率：从内存缓存取当前值，清文件后重新落盘
+		const kept = {};
+		for (const k of ['config', 'pity', 'balance', 'probabilityRates']) kept[k] = storageLocal.get(k);
+		for (const k of ['config', 'pity', 'balance', 'rollCounter', 'guaranteedStatus', 'ownedItem', 'probabilityRates']) {
+			await removeStoredKey(k);
+		}
+		delete kept.config.additionalClaimed;
+		for (const [k, v] of Object.entries(kept)) storageLocal.set(k, v);
 		return;
 	}
 
-	// 不用 localStorage.clear()：本项目的 localStorage 只有 'WarpSimulator'（游戏数据）
-	// 与 'rollcall'（点名名单）两个键，全清会连带抹掉用户手动导入的班级/小组名单，
-	// 而名单可能几十人、重导成本高。这里定向删游戏数据键，与上方 keepSetting 分支、
-	// 以及原神版的做法保持一致。偏好设置存在 cookie，不受此处影响。
-	localStorage.removeItem('WarpSimulator');
+	// 定向删游戏数据文件。偏好设置已并入 config/settings.json，
+	// 全清分支连它一起删（用户主动重置即接受偏好归默认）。
+	for (const k of ['config', 'pity', 'balance', 'rollCounter', 'guaranteedStatus', 'ownedItem', 'probabilityRates']) {
+		await removeStoredKey(k);
+	}
+	// 名单数据不删：几十人的名单重导成本高，与旧版「不碰 rollcall 键」的取舍一致
 
 	stellarJade.set(balance.stellarJade);
 	specialPass.set(balance.ticketPass);

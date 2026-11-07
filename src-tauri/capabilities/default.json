@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "星穹铁道跃迁点名器桌面壳权限：仅核心窗口能力（无导出需求，不装 dialog/fs 插件）",
+  "description": "星穹铁道跃迁点名器桌面壳权限：核心窗口 + 外链 + 保存对话框与写文件（数据导出/截图保存）",
   "windows": [
     "main"
   ],
@@ -12,6 +12,19 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://github.com/**" }
+      ]
+    },
+    "dialog:default",
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        { "path": "**" }
       ]
     }
   ]
