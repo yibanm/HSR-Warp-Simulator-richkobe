@@ -1,6 +1,7 @@
 import { starter } from '$lib/data/banners/starter.json';
 import { regular } from '$lib/data/banners/regular.json';
 import { banners } from '$lib/data/banners/lists.json';
+import { version as siteVersion, warpPhase } from '$lib/data/warp-setup.json';
 
 import { checkStarterBanner } from '$lib/helpers/dataAPI/storage-reader';
 import { activeWarp, bannerList, warpList } from '$lib/stores/app-store';
@@ -14,7 +15,12 @@ export const identifyBanner = (bnid = '0-0') => {
 
 export const initializeBanner = async (version, phase) => {
 	try {
-		if (!version || !phase) return {};
+		// 兜底：version/phase 来自存储层（activeVersion/activePhase 初值是 null），
+		// 存储初始化失败时不能静默 return {} —— 那样 bannerList 永远为空，界面会
+		// 变成「标题兜底英文 + 缩略图/背景全黑」且不报任何错。回退构建期的
+		// warp-setup.json 当前版本，保证卡池数据一定可用。
+		if (!version) version = siteVersion;
+		if (!phase) phase = warpPhase;
 		const list = checkStarterBanner() ? [{ ...starter, ...identifyBanner(starter.bannerID) }] : [];
 		const { data } = await import(`../../lib/data/banners/events/${version}.json`);
 		const { character, lightcone, regularVersion } = data.find((d) => d.phase === phase).banners;

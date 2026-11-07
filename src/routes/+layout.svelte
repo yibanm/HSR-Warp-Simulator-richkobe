@@ -94,10 +94,17 @@
 		await initRollcall();
 
 		// Service Worker for Faster Load
-		// 壳环境（Tauri/Electron 注入 __TAURI__/electronAPI）不注册 SW：自定义协议下
-		// SW 拦截会让 JS chunk 加载失败 → hydration 不完成 → 永久卡预渲染骨架
-		// （用户 2026-11-05 Tauri 壳内卡「正在连接」实测）
-		const inShell = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__ || !!window.electronAPI);
+		// 原生壳（Tauri/Electron/Capacitor）一律不注册 SW：自定义 scheme 下 SW 的
+		// NetworkFirst 取不到网络、precache 又是空的，动态 import 的 chunk（含
+		// events/<version>.json）加载失败 → bannerList 永远为空 → 标题显示兜底英文
+		// 「Subject To Change」、缩略图与背景全黑（用户 2026-11-05 Tauri 实测卡
+		// 「正在连接」、2026-11-07 安卓真机实测整屏黑底，同一根因）
+		const inShell =
+			typeof window !== 'undefined' &&
+			(!!window.__TAURI__ ||
+				!!window.__TAURI_INTERNALS__ ||
+				!!window.electronAPI ||
+				!!window.Capacitor?.isNativePlatform?.());
 		if ('serviceWorker' in navigator && !dev && !inShell) {
 			navigator.serviceWorker.register('/sw.js'); // /dev-sw.js?dev-sw
 		} else if (inShell && 'serviceWorker' in navigator) {

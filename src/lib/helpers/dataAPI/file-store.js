@@ -31,7 +31,29 @@ const isAndroid = () =>
 let fsPlugin = null;
 const ANDROID_DIR = 'hsr-data';
 
-const invoke = (cmd, args) => window.__TAURI_INTERNALS__.invoke(cmd, args);
+/**
+ * 文件 IO 超时保护。
+ *
+ * 原生桥（Capacitor/Tauri）的 promise 挂起时永不 settle，会卡死
+ * +page.svelte onMount 里的 `await initStorage()`，其后的
+ * setBannerVersionAndPhase() 永不执行 → activeVersion 停在 null 初值 →
+ * initializeBanner 静默 return {} → bannerList 为空 → 标题显示兜底英文
+ * 「Subject To Change」、卡池缩略图与背景全黑（2026-11-07 安卓真机实测；
+ * 注意此路径不抛错，故页面上的「卡池数据加载失败」提示不会出现）。
+ *
+ * 超时后抛错，readJson 按「文件不存在」降级返回默认值，卡池数据由
+ * warp-setup.json 的构建期版本兜底，画面可正常渲染。
+ */
+const IO_TIMEOUT_MS = 4000;
+const withTimeout = (promise, label) =>
+	Promise.race([
+		Promise.resolve(promise),
+		new Promise((_, reject) =>
+			setTimeout(() => reject(new Error(`文件操作超时：${label}`)), IO_TIMEOUT_MS)
+		)
+	]);
+
+const invoke = (cmd, args) => withTimeout(window.__TAURI_INTERNALS__.invoke(cmd, args), cmd);
 
 const capDir = async () => {
 	if (!fsPlugin) {
@@ -44,11 +66,14 @@ const capDir = async () => {
 const capRead = async (rel, encoding) => {
 	const { Filesystem, Directory } = await capDir();
 	try {
-		const r = await Filesystem.readFile({
-			path: `${ANDROID_DIR}/${rel}`,
-			directory: Directory.ExternalData,
-			encoding
-		});
+		const r = await withTimeout(
+			Filesystem.readFile({
+				path: `${ANDROID_DIR}/${rel}`,
+				directory: Directory.ExternalData,
+				encoding
+			}),
+			`读 ${rel}`
+		);
 		return r.data;
 	} catch (e) {
 		if (String(e?.message || e).includes('not exist')) throw new Error('ENOENT');
@@ -58,19 +83,25 @@ const capRead = async (rel, encoding) => {
 
 const capWrite = async (rel, data, encoding) => {
 	const { Filesystem, Directory } = await capDir();
-	await Filesystem.writeFile({
-		path: `${ANDROID_DIR}/${rel}`,
-		data,
-		directory: Directory.ExternalData,
-		encoding,
-		recursive: true
-	});
+	await withTimeout(
+		Filesystem.writeFile({
+			path: `${ANDROID_DIR}/${rel}`,
+			data,
+			directory: Directory.ExternalData,
+			encoding,
+			recursive: true
+		}),
+		`写 ${rel}`
+	);
 };
 
 const capDelete = async (rel) => {
 	const { Filesystem, Directory } = await capDir();
 	try {
-		await Filesystem.deleteFile({ path: `${ANDROID_DIR}/${rel}`, directory: Directory.ExternalData });
+		await withTimeout(
+			Filesystem.deleteFile({ path: `${ANDROID_DIR}/${rel}`, directory: Directory.ExternalData }),
+			`删 ${rel}`
+		);
 	} catch (e) {
 		if (!String(e?.message || e).includes('not exist')) throw e;
 	}
