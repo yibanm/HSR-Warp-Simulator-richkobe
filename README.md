@@ -19,16 +19,6 @@
 |---|---|
 | ![名单编辑器](screenshots/cn-editor.jpg) |  |
 
-上游英文界面预览（缩小展示）：
-
-| 卡池详情 | 切换卡池 |
-|---|---|
-| <img src="screenshots/light-cone.jpg" width="360" alt="Light Cone Banner"> | <img src="screenshots/switch-banner.jpg" width="360" alt="Switch Banner"> |
-
-| 搜集（库存） | 商店 |
-|---|---|
-| <img src="screenshots/bank-data.jpg" width="360" alt="Bank Data"> | <img src="screenshots/shop.jpg" width="360" alt="Shop"> |
-
 ## 功能特性
 
 **跃迁模拟**
